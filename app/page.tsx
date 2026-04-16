@@ -413,11 +413,9 @@ export default function HomePage() {
                 transition={{ delay: 0.3 }}
                 className="mt-3 flex flex-wrap items-center gap-2 px-1 text-[11px] text-muted-foreground"
               >
-                <span className="rounded bg-accent px-1.5 py-0.5">
-                  {fullResult.metadata.provider}
-                </span>
-                <span className="rounded bg-accent px-1.5 py-0.5">
-                  {fullResult.metadata.model.split("/").pop()}
+                <span className={`rounded px-1.5 py-0.5 ${fullResult.metadata.isFallback ? "bg-amber-500/20 text-amber-500" : "bg-accent"}`}>
+                  {fullResult.metadata.isFallback ? "Fallback: " : "Using: "}
+                  {fullResult.metadata.model.split("/").pop()} ({fullResult.metadata.provider.toUpperCase()})
                 </span>
                 <span>
                   {fullResult.metadata.durationMs > 0

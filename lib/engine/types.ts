@@ -53,11 +53,12 @@ export interface FileContext {
 // ── Model Routing ──────────────────────────────────────────────
 
 export interface ResolvedModel {
-  provider: ModelProvider;
-  modelId: string;
+  id: string;
+  provider: "nvidia" | "openrouter";
+  type: "fast" | "reasoning" | "coding" | "balanced";
+  context_length: number;
+  cost_priority: number;
   displayName: string;
-  maxTokens: number;
-  temperature: number;
 }
 
 export interface ModelFallbackChain {
@@ -69,14 +70,13 @@ export interface ModelFallbackChain {
 
 export interface LLMResponse {
   content: string;
-  model: string;
-  provider: ModelProvider;
-  tokensUsed: {
-    prompt: number;
-    completion: number;
-    total: number;
+  usage: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
   };
-  finishReason: string;
+  model_used: string;
+  provider: string;
 }
 
 export interface LLMStreamChunk {
@@ -135,6 +135,7 @@ export interface ResearchResult {
     intent: IntentType;
     tokensUsed: number;
     durationMs: number;
+    isFallback?: boolean;
   };
 }
 

@@ -13,8 +13,7 @@ import { searchWithFallback } from "./search-router";
 import { selectModel, getNextFallback } from "./model-router";
 import { buildContext } from "./context-builder";
 import { normalizeResponse } from "./response-normalizer";
-import { nvidiaWithRetry } from "./providers/nvidia";
-import { openrouterWithRetry } from "./providers/openrouter";
+import { generateAIResponse } from "./providers";
 import { classifyError, userFacingMessage } from "./errors";
 
 // ── System Prompt (Research Agent Core Identity) ───────────────
@@ -70,44 +69,6 @@ Remember: Return ONLY valid JSON. No markdown fences, no explanatory text outsid
   return { system, user };
 }
 
-// ── Provider Dispatch ──────────────────────────────────────────
-
-async function callProvider(
-  model: ResolvedModel,
-  systemPrompt: string,
-  userPrompt: string,
-  apiKeys: ApiKeys,
-  onChunk?: StreamCallback
-): Promise<LLMResponse> {
-  const messages = [
-    { role: "system" as const, content: systemPrompt },
-    { role: "user" as const, content: userPrompt },
-  ];
-  const options = {
-    model: model.modelId,
-    messages,
-    maxTokens: model.maxTokens,
-    temperature: model.temperature,
-    stream: !!onChunk,
-  };
-
-  switch (model.provider) {
-    case "nvidia": {
-      if (!apiKeys.nvidiaKey) throw new Error("Missing NVIDIA API key");
-      return nvidiaWithRetry(apiKeys.nvidiaKey, options, onChunk);
-    }
-    case "openrouter": {
-      if (!apiKeys.openrouterKey) throw new Error("Missing OpenRouter API key");
-      return openrouterWithRetry(apiKeys.openrouterKey, options, onChunk);
-    }
-    case "perplexity": {
-      // Perplexity models are used for search only; for generation, fall through to OpenRouter
-      if (!apiKeys.openrouterKey) throw new Error("Missing OpenRouter API key for Perplexity generation fallback");
-      return openrouterWithRetry(apiKeys.openrouterKey, options, onChunk);
-    }
-  }
-}
-
 // ── Main Orchestrator ──────────────────────────────────────────
 
 export async function runResearch(
@@ -123,7 +84,7 @@ export async function runResearch(
   console.log("[orchestrator] Intent:", enhanced.intent, "| Mode:", options.mode);
 
   // ── Step 2: Select Model ─────────────────────────────────────
-  const modelChain = selectModel(options.userModelId, enhanced.intent, options.mode);
+  const modelChain = selectModel(options.userModelId, query);
   let activeModel = modelChain.primary;
   const failedModels = new Set<string>();
 
@@ -153,37 +114,51 @@ export async function runResearch(
   while (true) {
     try {
       console.log("[orchestrator] Generating with:", activeModel.displayName, `(${activeModel.provider})`);
-      llmResponse = await callProvider(activeModel, system, user, apiKeys, onChunk);
+      
+      const messages = [
+        { role: "system" as const, content: system },
+        { role: "user" as const, content: user },
+      ];
+      
+      llmResponse = await generateAIResponse({
+        model: activeModel.id,
+        provider: activeModel.provider,
+        messages,
+        stream: !!onChunk,
+        apiKeys,
+        onChunk
+      });
       break;
     } catch (err) {
       const researchErr = classifyError(err, activeModel.provider);
-      failedModels.add(activeModel.modelId);
-      console.warn("[orchestrator]", userFacingMessage(researchErr));
+      failedModels.add(activeModel.id);
+      console.warn(`[orchestrator] Model ${activeModel.id} failed:`, userFacingMessage(researchErr));
 
       if (!researchErr.retryable) throw researchErr;
 
       const nextModel = getNextFallback(modelChain, failedModels);
       if (!nextModel) throw researchErr;
 
-      console.log("[orchestrator] Falling back to:", nextModel.displayName, `(${nextModel.provider})`);
+      console.warn(`[orchestrator] FALLBACK EVENT: Switching from ${activeModel.id} to ${nextModel.id}`);
       activeModel = nextModel;
     }
   }
 
   // ── Step 6: Normalize Response ───────────────────────────────
   const result = normalizeResponse(llmResponse.content, context.sources, {
-    model: activeModel.modelId,
+    model: activeModel.id,
     provider: activeModel.provider,
     searchProvider,
     intent: enhanced.intent,
-    tokensUsed: llmResponse.tokensUsed.total || context.estimatedTokens,
+    tokensUsed: llmResponse.usage.total_tokens || context.estimatedTokens,
     durationMs: Date.now() - startTime,
+    isFallback: activeModel.id !== modelChain.primary.id,
   });
 
   console.log(
     "[orchestrator] Complete:",
     result.sources.length, "sources |",
-    activeModel.provider + "/" + activeModel.modelId, "|",
+    activeModel.provider + "/" + activeModel.id, "|",
     result.metadata.durationMs + "ms"
   );
 

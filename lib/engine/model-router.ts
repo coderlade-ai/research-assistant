@@ -1,74 +1,44 @@
-import type { IntentType, SearchMode, ResolvedModel, ModelFallbackChain } from "./types";
-import {
-  UI_MODEL_MAP,
-  NVIDIA_MODELS,
-  OPENROUTER_MODELS,
-  FALLBACK_CHAINS,
-} from "./config";
+import type { ResolvedModel, ModelFallbackChain } from "./types";
+import { MODEL_REGISTRY, getFallbackChain } from "./config";
 
 // ── Auto-Selection Logic ───────────────────────────────────────
-// NVIDIA is primary; OpenRouter is secondary for specialized tasks
+// Smart routing based on query content
 
-function autoSelectModel(intent: IntentType, mode: SearchMode): ResolvedModel {
-  // Deep mode → reasoning-class model
-  if (mode === "deep") {
-    return OPENROUTER_MODELS.deepseekR1;
+export function autoSelectModel(query: string): ResolvedModel {
+  const lowerQuery = query.toLowerCase();
+  
+  if (lowerQuery.includes("code") || lowerQuery.includes("debug")) {
+    return MODEL_REGISTRY.nvidia.find(m => m.type === "coding") || MODEL_REGISTRY.nvidia[0];
   }
-
-  // Corpus mode → strong general model
-  if (mode === "corpus") {
-    return NVIDIA_MODELS.nemotronUltra;
+  
+  if (lowerQuery.includes("deep research")) {
+    return MODEL_REGISTRY.nvidia.find(m => m.type === "reasoning") || MODEL_REGISTRY.nvidia[0];
   }
-
-  // Pro mode → intent-based selection
-  switch (intent) {
-    case "coding":
-      return OPENROUTER_MODELS.qwenCoder;
-    case "research":
-      return NVIDIA_MODELS.nemotronUltra;
-    case "comparison":
-      return NVIDIA_MODELS.nemotron;
-    case "explanation":
-      return NVIDIA_MODELS.nemotron;
-    case "factual":
-      return NVIDIA_MODELS.nemotron;
-    default:
-      return NVIDIA_MODELS.nemotron;
+  
+  if (lowerQuery.includes("summary")) {
+    return MODEL_REGISTRY.nvidia.find(m => m.type === "fast") || MODEL_REGISTRY.nvidia[0];
   }
-}
-
-// ── Fallback Chain Builder ─────────────────────────────────────
-
-function buildFallbackChain(primary: ResolvedModel, intent: IntentType): ResolvedModel[] {
-  // Intent-specific chains take priority
-  if (intent === "coding") {
-    return FALLBACK_CHAINS.coding.filter((m) => m.modelId !== primary.modelId);
-  }
-  if (intent === "research") {
-    return FALLBACK_CHAINS.reasoning.filter((m) => m.modelId !== primary.modelId);
-  }
-
-  // Provider-based fallback
-  const chain = FALLBACK_CHAINS[primary.provider] ?? FALLBACK_CHAINS.nvidia;
-  return chain.filter((m) => m.modelId !== primary.modelId);
+  
+  return MODEL_REGISTRY.nvidia.find(m => m.type === "balanced") || MODEL_REGISTRY.nvidia[0];
 }
 
 // ── Public API ─────────────────────────────────────────────────
 
 export function selectModel(
   userModelId: string | undefined,
-  intent: IntentType,
-  mode: SearchMode
+  query: string
 ): ModelFallbackChain {
-  let primary: ResolvedModel;
+  let primary: ResolvedModel | undefined;
 
-  if (userModelId && UI_MODEL_MAP[userModelId]) {
-    primary = UI_MODEL_MAP[userModelId];
-  } else {
-    primary = autoSelectModel(intent, mode);
+  if (userModelId) {
+    primary = [...MODEL_REGISTRY.nvidia, ...MODEL_REGISTRY.openrouter].find(m => m.id === userModelId);
   }
 
-  const fallbacks = buildFallbackChain(primary, intent);
+  if (!primary) {
+    primary = autoSelectModel(query);
+  }
+
+  const fallbacks = getFallbackChain(primary);
 
   return { primary, fallbacks };
 }
@@ -78,7 +48,7 @@ export function getNextFallback(
   failedModelIds: Set<string>
 ): ResolvedModel | null {
   for (const model of chain.fallbacks) {
-    if (!failedModelIds.has(model.modelId)) return model;
+    if (!failedModelIds.has(model.id)) return model;
   }
   return null;
 }

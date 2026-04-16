@@ -65,14 +65,13 @@ export async function nvidiaComplete(
 
   return {
     content: choice?.message?.content ?? "",
-    model: data.model ?? options.model,
+    model_used: data.model ?? options.model,
     provider: "nvidia",
-    tokensUsed: {
-      prompt: data.usage?.prompt_tokens ?? 0,
-      completion: data.usage?.completion_tokens ?? 0,
-      total: data.usage?.total_tokens ?? 0,
-    },
-    finishReason: choice?.finish_reason ?? "stop",
+    usage: {
+      prompt_tokens: data.usage?.prompt_tokens ?? 0,
+      completion_tokens: data.usage?.completion_tokens ?? 0,
+      total_tokens: data.usage?.total_tokens ?? 0,
+    }
   };
 }
 
@@ -134,10 +133,9 @@ export async function nvidiaStream(
 
   return {
     content: fullContent,
-    model: options.model,
+    model_used: options.model,
     provider: "nvidia",
-    tokensUsed: { prompt: 0, completion: 0, total: 0 },
-    finishReason: "stop",
+    usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
   };
 }
 
