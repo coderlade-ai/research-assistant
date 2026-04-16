@@ -182,38 +182,50 @@ export function toResponseSections(result: ResearchResult): ResponseSection[] {
   const sections: ResponseSection[] = [];
 
   if (result.overview) {
-    sections.push({ type: "heading", content: "Overview" });
+    sections.push({ type: "heading", content: "🔍 Overview" });
     sections.push({ type: "paragraph", content: result.overview });
   }
 
   if (result.keyInsights.length > 0) {
-    sections.push({ type: "heading", content: "Key Insights" });
+    sections.push({ type: "heading", content: "⚡ Key Insights" });
     sections.push({ type: "bullets", content: "", items: result.keyInsights });
   }
 
   if (result.details) {
-    sections.push({ type: "heading", content: "Detailed Analysis" });
+    sections.push({ type: "heading", content: "📊 Analysis" });
     sections.push({ type: "paragraph", content: result.details });
   }
 
   if (result.comparison) {
-    sections.push({ type: "heading", content: "Comparison" });
+    sections.push({ type: "heading", content: "⚖️ Comparison" });
     sections.push({ type: "paragraph", content: result.comparison });
   }
 
+  // Code section (from Coding Agent)
+  if (result.code) {
+    sections.push({ type: "heading", content: "💻 Code" });
+    sections.push({ type: "code", content: result.code });
+  }
+
   if (result.expertInsights.length > 0) {
-    sections.push({ type: "heading", content: "Expert Insights" });
+    sections.push({ type: "heading", content: "🧠 Expert Insights" });
     sections.push({ type: "bullets", content: "", items: result.expertInsights });
   }
 
   if (result.conclusion) {
-    sections.push({ type: "heading", content: "Conclusion" });
+    sections.push({ type: "heading", content: "🚀 Conclusion" });
     sections.push({ type: "paragraph", content: result.conclusion });
+  }
+
+  // Fact-Check section (from Fact-Check Agent)
+  if (result.factCheck) {
+    sections.push({ type: "heading", content: "🔍 Fact Check" });
+    sections.push({ type: "fact_check", content: result.factCheck });
   }
 
   // References section
   if (result.references.length > 0) {
-    sections.push({ type: "heading", content: "References" });
+    sections.push({ type: "heading", content: "📚 Sources" });
     sections.push({
       type: "bullets",
       content: "",
@@ -232,37 +244,55 @@ export function toExportMarkdown(result: ResearchResult): string {
   const lines: string[] = [];
 
   if (result.overview) {
-    lines.push("## Overview", "", result.overview, "");
+    lines.push("## 🔍 Overview", "", result.overview, "");
   }
 
   if (result.keyInsights.length > 0) {
-    lines.push("## Key Insights", "");
+    lines.push("## ⚡ Key Insights", "");
     result.keyInsights.forEach((item) => lines.push(`- ${item}`));
     lines.push("");
   }
 
   if (result.details) {
-    lines.push("## Detailed Analysis", "", result.details, "");
+    lines.push("## 📊 Analysis", "", result.details, "");
   }
 
   if (result.comparison) {
-    lines.push("## Comparison", "", result.comparison, "");
+    lines.push("## ⚖️ Comparison", "", result.comparison, "");
+  }
+
+  if (result.code) {
+    lines.push("## 💻 Code", "", result.code, "");
   }
 
   if (result.expertInsights.length > 0) {
-    lines.push("## Expert Insights", "");
+    lines.push("## 🧠 Expert Insights", "");
     result.expertInsights.forEach((item) => lines.push(`- ${item}`));
     lines.push("");
   }
 
   if (result.conclusion) {
-    lines.push("## Conclusion", "", result.conclusion, "");
+    lines.push("## 🚀 Conclusion", "", result.conclusion, "");
+  }
+
+  if (result.factCheck) {
+    lines.push("## 🔍 Fact Check", "", result.factCheck, "");
   }
 
   if (result.references.length > 0) {
-    lines.push("## References", "");
+    lines.push("## 📚 Sources", "");
     result.references.forEach((ref) => {
       lines.push(`${ref.id}. [${ref.title}](${ref.url}) — ${ref.domain}`);
+    });
+    lines.push("");
+  }
+
+  // Agent trace footer
+  if (result.metadata.agentTrace) {
+    lines.push("---", "### Agent Trace", "");
+    result.metadata.agentTrace.forEach((t) => {
+      const icon = t.status === "done" ? "✓" : t.status === "failed" ? "✗" : t.status === "skipped" ? "⟳" : "…";
+      lines.push(`${icon} **${t.agent}** → ${t.model ?? "—"}${t.isFallback ? " *(fallback)*" : ""} ${t.durationMs ? `[${(t.durationMs / 1000).toFixed(1)}s]` : ""}`);
     });
     lines.push("");
   }

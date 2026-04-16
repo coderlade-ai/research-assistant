@@ -16,6 +16,67 @@ export type ModelProvider = "nvidia" | "openrouter" | "perplexity";
 
 export type SearchProvider = "perplexity" | "openrouter";
 
+// ── Task Types (for model routing) ─────────────────────────────
+
+export type TaskType =
+  | "search"
+  | "query"
+  | "analysis"
+  | "coding"
+  | "summary"
+  | "fact-check"
+  | "report"
+  | "default";
+
+// ── Agent Names ────────────────────────────────────────────────
+
+export type AgentName =
+  | "web-search-agent"
+  | "query-intelligence-agent"
+  | "analysis-agent"
+  | "coding-agent"
+  | "summary-agent"
+  | "fact-check-agent"
+  | "report-agent";
+
+export type AgentStatus = "pending" | "running" | "done" | "failed" | "skipped";
+
+// ── Agent Context (shared input to all agents) ─────────────────
+
+export interface AgentContext {
+  query: string;
+  enhanced_query: string;
+  intent: IntentType;
+  subtopics: string[];
+  web_results: SearchResult[];
+  file_context: FileContext[];
+}
+
+// ── Agent Result ───────────────────────────────────────────────
+
+export interface AgentResult {
+  agent: AgentName;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  output: Record<string, any>;
+  model_used: string;
+  provider: string;
+  durationMs: number;
+  isFallback: boolean;
+  error?: string;
+}
+
+// ── Agent Status Event (SSE) ───────────────────────────────────
+
+export interface AgentStatusEvent {
+  agent: AgentName;
+  status: AgentStatus;
+  model?: string;
+  provider?: string;
+  durationMs?: number;
+  isFallback?: boolean;
+  error?: string;
+}
+
 // ── Query Enhancement ──────────────────────────────────────────
 
 export interface EnhancedQuery {
@@ -126,8 +187,12 @@ export interface ResearchResult {
   comparison: string;
   expertInsights: string[];
   conclusion: string;
+  // New fields for multi-agent
+  code?: string;
+  factCheck?: string;
   sources: ResearchSource[];
   references: ResearchSource[];
+  agentResults?: AgentResult[];
   metadata: {
     model: string;
     provider: string;
@@ -136,6 +201,7 @@ export interface ResearchResult {
     tokensUsed: number;
     durationMs: number;
     isFallback?: boolean;
+    agentTrace?: AgentStatusEvent[];
   };
 }
 
@@ -150,6 +216,8 @@ export interface ResearchOptions {
 }
 
 export type StreamCallback = (chunk: string, done: boolean) => void;
+
+export type AgentStatusCallback = (event: AgentStatusEvent) => void;
 
 // ── API Route ──────────────────────────────────────────────────
 
@@ -178,7 +246,8 @@ export interface ApiKeys {
 // ── Response Section (UI-compatible) ───────────────────────────
 
 export interface ResponseSection {
-  type: "heading" | "paragraph" | "bullets";
+  type: "heading" | "paragraph" | "bullets" | "code" | "fact_check";
   content: string;
   items?: string[];
+  language?: string;
 }

@@ -8,6 +8,7 @@ import { SearchControls } from "@/components/search/search-controls";
 import { ResponseArea } from "@/components/response/response-area";
 import { SourcesSection } from "@/components/response/sources-section";
 import { ExportButtons } from "@/components/export/export-buttons";
+import { AgentStatusPanel, type AgentState } from "@/components/agents/agent-status-panel";
 import { useMobile } from "@/hooks/use-mobile";
 import { useResearchCache, type HistoryEntry } from "@/hooks/use-cache";
 import { toResponseSections, toExportMarkdown } from "@/lib/engine/response-normalizer";
@@ -16,8 +17,22 @@ import type {
   ResearchApiResponse,
   ResearchResult,
   ResponseSection,
+  AgentName,
+  AgentStatusEvent,
 } from "@/lib/engine/types";
 import { ParsedFile } from "@/lib/engine/file-parser";
+
+// ── Agent name list ────────────────────────────────────────────
+
+const ALL_AGENTS: AgentName[] = [
+  "web-search-agent",
+  "query-intelligence-agent",
+  "analysis-agent",
+  "summary-agent",
+  "fact-check-agent",
+  "coding-agent",
+  "report-agent",
+];
 
 // ── SSE Stream Reader ──────────────────────────────────────────
 
@@ -29,6 +44,7 @@ async function readStream(
     onResult: (result: ResearchResult) => void;
     onError: (message: string) => void;
     onDone: () => void;
+    onAgentStatus: (event: AgentStatusEvent) => void;
   }
 ) {
   const reader = response.body?.getReader();
@@ -70,6 +86,9 @@ async function readStream(
               case "done":
                 callbacks.onDone();
                 break;
+              case "agent_status":
+                callbacks.onAgentStatus(parsed as AgentStatusEvent);
+                break;
             }
           } catch {
             // skip malformed JSON
@@ -99,8 +118,14 @@ function revealSections(
         setIsStreaming(false);
         setSources(sources);
       }
-    }, (i + 1) * 200);
+    }, (i + 1) * 150);
   });
+}
+
+// ── Initial agent states ───────────────────────────────────────
+
+function initialAgentStates(): Partial<Record<AgentName, AgentState>> {
+  return Object.fromEntries(ALL_AGENTS.map((n) => [n, { status: "pending" }])) as Partial<Record<AgentName, AgentState>>;
 }
 
 // ── Component ──────────────────────────────────────────────────
@@ -131,6 +156,12 @@ export default function HomePage() {
   const [fullResult, setFullResult] = useState<ResearchResult | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // ── Agent Status State ────────────────────────────────────────
+  const [agentStatuses, setAgentStatuses] = useState<Partial<Record<AgentName, AgentState>>>(
+    initialAgentStates()
+  );
+  const [showAgentPanel, setShowAgentPanel] = useState(false);
+
   // ── Load History on Mount ────────────────────────────────────
   useEffect(() => {
     setHistory(getHistory());
@@ -149,6 +180,8 @@ export default function HomePage() {
     setStatusMessage(null);
     setStreamingText("");
     setFullResult(null);
+    setAgentStatuses(initialAgentStates());
+    setShowAgentPanel(false);
     setSidebarView("home");
   }, []);
 
@@ -165,6 +198,21 @@ export default function HomePage() {
     setHistory([]);
   }, [clearHistory]);
 
+  // ── Agent Status Update Handler ──────────────────────────────
+  const handleAgentStatus = useCallback((event: AgentStatusEvent) => {
+    setAgentStatuses((prev) => ({
+      ...prev,
+      [event.agent]: {
+        status: event.status,
+        model: event.model,
+        provider: event.provider,
+        durationMs: event.durationMs,
+        isFallback: event.isFallback,
+        error: event.error,
+      },
+    }));
+  }, []);
+
   // ── Submit Handler ───────────────────────────────────────────
   const handleSubmit = useCallback(async (files: ParsedFile[] = []) => {
     if (!query.trim() || isLoading) return;
@@ -180,6 +228,23 @@ export default function HomePage() {
       setStatusMessage(null);
       setSections([]);
       setSources([]);
+      setShowAgentPanel(false);
+      // Restore agent trace from cache if available
+      if (cached.metadata.agentTrace) {
+        const restored = Object.fromEntries(
+          cached.metadata.agentTrace.map((t) => [
+            t.agent,
+            {
+              status: t.status,
+              model: t.model,
+              provider: t.provider,
+              durationMs: t.durationMs,
+              isFallback: t.isFallback,
+            } satisfies AgentState,
+          ])
+        ) as Partial<Record<AgentName, AgentState>>;
+        setAgentStatuses(restored);
+      }
       revealSections(allSections, cached.sources, setSections, setSources, setIsStreaming);
       setHistory(getHistory());
       return;
@@ -196,9 +261,11 @@ export default function HomePage() {
     setSections([]);
     setSources([]);
     setError(null);
-    setStatusMessage("Starting research...");
+    setStatusMessage("Initializing multi-agent pipeline...");
     setStreamingText("");
     setFullResult(null);
+    setAgentStatuses(initialAgentStates());
+    setShowAgentPanel(true);
 
     try {
       const res = await fetch("/api/research", {
@@ -260,7 +327,9 @@ export default function HomePage() {
         onDone: () => {
           setIsStreaming(false);
           setStatusMessage(null);
+          setShowAgentPanel(false);
         },
+        onAgentStatus: handleAgentStatus,
       });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
@@ -268,9 +337,10 @@ export default function HomePage() {
       setHasResponse(true);
       setIsStreaming(false);
       setStatusMessage(null);
+      setShowAgentPanel(false);
       setError(err instanceof Error ? err.message : "Something went wrong");
     }
-  }, [query, mode, selectedModel, isLoading, getCached, setCached, getHistory]);
+  }, [query, mode, selectedModel, isLoading, getCached, setCached, getHistory, handleAgentStatus]);
 
   // ── Export Handler ───────────────────────────────────────────
   const handleExport = useCallback(
@@ -340,7 +410,7 @@ export default function HomePage() {
                   Research <span className="text-gradient">Smarter</span>
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  AI-powered research assistant — NVIDIA + OpenRouter + Perplexity Sonar
+                  7-agent parallel AI system — Query · Search · Analysis · Fact-Check · Code · Report
                 </p>
               </motion.div>
             )}
@@ -365,8 +435,20 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Status */}
-            {statusMessage && (
+            {/* Agent Status Panel */}
+            {showAgentPanel && (isLoading || isStreaming) && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="mt-5"
+              >
+                <AgentStatusPanel agents={agentStatuses} />
+              </motion.div>
+            )}
+
+            {/* Status message */}
+            {statusMessage && !showAgentPanel && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -414,22 +496,20 @@ export default function HomePage() {
                 className="mt-3 flex flex-wrap items-center gap-2 px-1 text-[11px] text-muted-foreground"
               >
                 <span className={`rounded px-1.5 py-0.5 ${fullResult.metadata.isFallback ? "bg-amber-500/20 text-amber-500" : "bg-accent"}`}>
-                  {fullResult.metadata.isFallback ? "Fallback: " : "Using: "}
+                  {fullResult.metadata.isFallback ? "Fallback: " : "Report: "}
                   {fullResult.metadata.model.split("/").pop()} ({fullResult.metadata.provider.toUpperCase()})
                 </span>
-                <span>
-                  {fullResult.metadata.durationMs > 0
-                    ? `${(fullResult.metadata.durationMs / 1000).toFixed(1)}s`
-                    : ""}
-                </span>
-                <span>
-                  {fullResult.metadata.tokensUsed > 0
-                    ? `${fullResult.metadata.tokensUsed} tokens`
-                    : ""}
-                </span>
+                {fullResult.metadata.durationMs > 0 && (
+                  <span>{(fullResult.metadata.durationMs / 1000).toFixed(1)}s total</span>
+                )}
                 <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">
                   {fullResult.metadata.intent}
                 </span>
+                {fullResult.agentResults && (
+                  <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-emerald-400">
+                    {fullResult.agentResults.filter(r => !r.error || r.error === "skipped").length}/{fullResult.agentResults.length} agents OK
+                  </span>
+                )}
               </motion.div>
             )}
 

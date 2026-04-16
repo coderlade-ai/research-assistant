@@ -19,13 +19,18 @@ export const RETRY_CONFIG = {
 export const TOKEN_LIMITS = {
   contextWindow: 6000,
   maxResponseTokens: 2048,
+  agentMaxTokens: 1024,      // per-agent token budget (parallel cost control)
+  reportMaxTokens: 2048,     // report agent gets full budget
   wordsToTokenRatio: 1.3,
 } as const;
 
 // ── Model Registry ─────────────────────────────────────────────
+// NVIDIA NIM models (billed per token, high quality)
+// OpenRouter models (many free tiers, used as fallbacks)
 
 export const MODEL_REGISTRY: Record<"nvidia" | "openrouter", ResolvedModel[]> = {
   nvidia: [
+    // ── Fast / Summary ─────────────────────────────────────
     {
       id: "minimaxai/minimax-m2.7",
       provider: "nvidia",
@@ -34,6 +39,7 @@ export const MODEL_REGISTRY: Record<"nvidia" | "openrouter", ResolvedModel[]> = 
       cost_priority: 1,
       displayName: "MiniMax M2.7",
     },
+    // ── Reasoning / Query + Report ─────────────────────────
     {
       id: "moonshotai/kimi-k2-thinking",
       provider: "nvidia",
@@ -42,6 +48,7 @@ export const MODEL_REGISTRY: Record<"nvidia" | "openrouter", ResolvedModel[]> = 
       cost_priority: 2,
       displayName: "Kimi K2 Thinking",
     },
+    // ── Balanced ───────────────────────────────────────────
     {
       id: "abacusai/dracarys-llama-3.1-70b-instruct",
       provider: "nvidia",
@@ -50,6 +57,7 @@ export const MODEL_REGISTRY: Record<"nvidia" | "openrouter", ResolvedModel[]> = 
       cost_priority: 2,
       displayName: "Dracarys Llama 3.1 70B",
     },
+    // ── Fact-Check ─────────────────────────────────────────
     {
       id: "mistralai/mistral-large-3-675b-instruct-2512",
       provider: "nvidia",
@@ -58,6 +66,7 @@ export const MODEL_REGISTRY: Record<"nvidia" | "openrouter", ResolvedModel[]> = 
       cost_priority: 3,
       displayName: "Mistral Large 3",
     },
+    // ── Analysis / Deep Research ───────────────────────────
     {
       id: "deepseek-ai/deepseek-v3.2",
       provider: "nvidia",
@@ -74,6 +83,7 @@ export const MODEL_REGISTRY: Record<"nvidia" | "openrouter", ResolvedModel[]> = 
       cost_priority: 2,
       displayName: "GLM 4.7",
     },
+    // ── Coding ─────────────────────────────────────────────
     {
       id: "qwen/qwen3-coder-480b-a35b-instruct",
       provider: "nvidia",
@@ -81,6 +91,15 @@ export const MODEL_REGISTRY: Record<"nvidia" | "openrouter", ResolvedModel[]> = 
       context_length: 32768,
       cost_priority: 3,
       displayName: "Qwen 3 Coder 480B",
+    },
+    // ── New: Nemotron for Analysis fallback ────────────────
+    {
+      id: "nvidia/nemotron-3-super-120b-a12b",
+      provider: "nvidia",
+      type: "balanced",
+      context_length: 8192,
+      cost_priority: 2,
+      displayName: "Nemotron 3 Super 120B",
     },
   ],
   openrouter: [
@@ -90,7 +109,7 @@ export const MODEL_REGISTRY: Record<"nvidia" | "openrouter", ResolvedModel[]> = 
       type: "balanced",
       context_length: 8192,
       cost_priority: 1,
-      displayName: "Nemotron 3 Super",
+      displayName: "Nemotron 3 Super (Free)",
     },
     {
       id: "qwen/qwen3-coder:free",
@@ -106,15 +125,15 @@ export const MODEL_REGISTRY: Record<"nvidia" | "openrouter", ResolvedModel[]> = 
       type: "balanced",
       context_length: 8192,
       cost_priority: 1,
-      displayName: "Llama 3.3 70B",
+      displayName: "Llama 3.3 70B (Free)",
     },
     {
       id: "openai/gpt-oss-120b:free",
       provider: "openrouter",
-      type: "balanced",
+      type: "reasoning",
       context_length: 8192,
       cost_priority: 1,
-      displayName: "GPT-OSS 120B",
+      displayName: "GPT-OSS 120B (Free)",
     },
     {
       id: "z-ai/glm-4.5-air:free",
@@ -122,7 +141,7 @@ export const MODEL_REGISTRY: Record<"nvidia" | "openrouter", ResolvedModel[]> = 
       type: "fast",
       context_length: 8192,
       cost_priority: 1,
-      displayName: "GLM 4.5 Air",
+      displayName: "GLM 4.5 Air (Free)",
     },
     {
       id: "google/gemma-4-31b-it:free",
@@ -130,7 +149,7 @@ export const MODEL_REGISTRY: Record<"nvidia" | "openrouter", ResolvedModel[]> = 
       type: "fast",
       context_length: 8192,
       cost_priority: 1,
-      displayName: "Gemma 4 31B",
+      displayName: "Gemma 4 31B (Free)",
     },
     {
       id: "minimax/minimax-m2.5:free",
@@ -138,13 +157,60 @@ export const MODEL_REGISTRY: Record<"nvidia" | "openrouter", ResolvedModel[]> = 
       type: "fast",
       context_length: 8192,
       cost_priority: 1,
-      displayName: "MiniMax M2.5",
+      displayName: "MiniMax M2.5 (Free)",
     },
   ]
 };
 
+// ── Task-to-Model Mapping ──────────────────────────────────────
+// Primary = NVIDIA NIM | Fallback = OpenRouter (prefer free)
+
+export const AGENT_MODEL_MAP: Record<
+  "query" | "search" | "analysis" | "coding" | "summary" | "fact-check" | "report" | "default",
+  { primary: string; fallback: string }
+> = {
+  query: {
+    primary: "moonshotai/kimi-k2-thinking",
+    fallback: "openai/gpt-oss-120b:free",
+  },
+  search: {
+    primary: "perplexity/sonar",            // handled directly by sonar.ts
+    fallback: "meta-llama/llama-3.3-70b-instruct:free",
+  },
+  analysis: {
+    primary: "deepseek-ai/deepseek-v3.2",
+    fallback: "nvidia/nemotron-3-super-120b-a12b:free",
+  },
+  coding: {
+    primary: "qwen/qwen3-coder-480b-a35b-instruct",
+    fallback: "qwen/qwen3-coder:free",
+  },
+  summary: {
+    primary: "minimaxai/minimax-m2.7",
+    fallback: "google/gemma-4-31b-it:free",
+  },
+  "fact-check": {
+    primary: "mistralai/mistral-large-3-675b-instruct-2512",
+    fallback: "meta-llama/llama-3.3-70b-instruct:free",
+  },
+  report: {
+    primary: "moonshotai/kimi-k2-thinking",
+    fallback: "openai/gpt-oss-120b:free",
+  },
+  default: {
+    primary: "abacusai/dracarys-llama-3.1-70b-instruct",
+    fallback: "meta-llama/llama-3.3-70b-instruct:free",
+  },
+};
+
 // ── Fallback Builder ───────────────────────────────────────────
-// Generates fallback chains on the fly based on type
+
 export const getFallbackChain = (primary: ResolvedModel): ResolvedModel[] => {
   return MODEL_REGISTRY.openrouter.filter(m => m.type === primary.type && m.id !== primary.id);
 };
+
+// ── Lookup helpers ─────────────────────────────────────────────
+
+export function findModel(id: string): ResolvedModel | undefined {
+  return [...MODEL_REGISTRY.nvidia, ...MODEL_REGISTRY.openrouter].find(m => m.id === id || m.id === `${id}:free`);
+}

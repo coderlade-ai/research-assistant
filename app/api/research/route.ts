@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { runResearch } from "@/lib/engine/orchestrator";
 import { classifyError, userFacingMessage } from "@/lib/engine/errors";
-import type { ResearchRequest, ResearchApiResponse, ApiKeys } from "@/lib/engine/types";
+import type {
+  ResearchRequest,
+  ResearchApiResponse,
+  ApiKeys,
+  AgentStatusEvent,
+} from "@/lib/engine/types";
 
 // ── Resolve API Keys ───────────────────────────────────────────
 
@@ -35,20 +40,44 @@ function streamingResponse(
       }
 
       try {
-        send("status", { phase: "searching", message: "Searching sources..." });
+        send("status", { phase: "starting", message: "Initializing multi-agent research pipeline..." });
 
         const result = await runResearch(
           query,
           {
             mode: body.mode ?? "pro",
             userModelId: body.model,
-            maxSources: 6,
+            maxSources: 8,
+            files: body.files,
           },
           apiKeys,
-          // Stream callback — forward LLM tokens to client
+          // Streaming chunk callback (for partial token delivery)
           (chunk, done) => {
             if (chunk) send("token", { text: chunk });
-            if (done) send("status", { phase: "normalizing", message: "Processing results..." });
+            if (done) send("status", { phase: "finalizing", message: "Synthesizing final report..." });
+          },
+          // Agent status callback — fires per-agent start/done/fail events
+          (event: AgentStatusEvent) => {
+            send("agent_status", event);
+
+            // Also update the generic status message
+            const label = event.agent.replace("-agent", "").replace(/-/g, " ");
+            if (event.status === "running") {
+              send("status", {
+                phase: event.agent,
+                message: `${capitalize(label)} Agent → ${event.model?.split("/").pop() ?? ""}`,
+              });
+            } else if (event.status === "done") {
+              send("status", {
+                phase: event.agent,
+                message: `✓ ${capitalize(label)} complete${event.isFallback ? " (fallback)" : ""}`,
+              });
+            } else if (event.status === "failed") {
+              send("status", {
+                phase: event.agent,
+                message: `⚠ ${capitalize(label)} failed, continuing...`,
+              });
+            }
           }
         );
 
@@ -70,6 +99,12 @@ function streamingResponse(
       Connection: "keep-alive",
     },
   });
+}
+
+// ── Capitalize helper ──────────────────────────────────────────
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 // ── POST Handler ───────────────────────────────────────────────
@@ -98,8 +133,8 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    // Streaming mode
-    if (body.stream) {
+    // Streaming mode (default)
+    if (body.stream !== false) {
       return streamingResponse(body.query.trim(), body, apiKeys);
     }
 
@@ -109,7 +144,7 @@ export async function POST(request: Request): Promise<Response> {
       {
         mode: body.mode ?? "pro",
         userModelId: body.model,
-        maxSources: 6,
+        maxSources: 8,
         files: body.files,
       },
       apiKeys

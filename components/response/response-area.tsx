@@ -18,7 +18,17 @@ const sectionVariants = {
 };
 
 // Section headings that get special visual treatment
-const ACCENT_HEADINGS = new Set(["Expert Insights", "References"]);
+const ACCENT_HEADINGS = new Set(["🧠 Expert Insights", "Expert Insights", "📚 Sources", "References"]);
+const REFERENCE_HEADINGS = new Set(["📚 Sources", "References"]);
+
+// Extract language from fenced code block
+function extractCodeBlock(content: string): { language: string; code: string } {
+  const match = content.match(/^```(\w*)\n([\s\S]*?)```/);
+  if (match) {
+    return { language: match[1] || "text", code: match[2] };
+  }
+  return { language: "text", code: content };
+}
 
 export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
   if (sections.length === 0) return null;
@@ -36,7 +46,7 @@ export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
         {sections.map((section, i) => {
           if (section.type === "heading") lastHeading = section.content;
           const isAccentSection = ACCENT_HEADINGS.has(lastHeading) && section.type !== "heading";
-          const isReferences = lastHeading === "References";
+          const isReferences = REFERENCE_HEADINGS.has(lastHeading);
 
           return (
             <motion.div
@@ -46,6 +56,7 @@ export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
               animate="visible"
               variants={sectionVariants}
             >
+              {/* Heading */}
               {section.type === "heading" && (
                 <h3
                   className={`text-lg font-semibold ${
@@ -58,12 +69,14 @@ export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
                 </h3>
               )}
 
+              {/* Paragraph */}
               {section.type === "paragraph" && (
-                <p className="leading-relaxed text-muted-foreground">
+                <p className="leading-relaxed text-muted-foreground whitespace-pre-wrap">
                   {section.content}
                 </p>
               )}
 
+              {/* Bullet list */}
               {section.type === "bullets" && section.items && (
                 <ul className={`space-y-2 ${isReferences ? "pl-2" : "pl-4"}`}>
                   {section.items.map((item, j) => (
@@ -99,6 +112,16 @@ export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
                   ))}
                 </ul>
               )}
+
+              {/* Code block */}
+              {section.type === "code" && (
+                <CodeBlock content={section.content} />
+              )}
+
+              {/* Fact-check block */}
+              {section.type === "fact_check" && (
+                <FactCheckBlock content={section.content} />
+              )}
             </motion.div>
           );
         })}
@@ -125,5 +148,71 @@ export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
         </motion.div>
       )}
     </motion.div>
+  );
+}
+
+// ── Code Block Sub-Component ───────────────────────────────────
+
+function CodeBlock({ content }: { content: string }) {
+  const { language, code } = extractCodeBlock(content);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code).catch(() => {});
+  };
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-white/10">
+      {/* Header bar */}
+      <div className="flex items-center justify-between bg-white/5 px-4 py-2">
+        <span className="font-mono text-xs text-muted-foreground">
+          {language || "code"}
+        </span>
+        <button
+          onClick={handleCopy}
+          className="rounded px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+        >
+          Copy
+        </button>
+      </div>
+      {/* Code */}
+      <pre className="overflow-x-auto p-4 text-sm leading-relaxed">
+        <code className="text-emerald-300/90 font-mono">{code}</code>
+      </pre>
+    </div>
+  );
+}
+
+// ── Fact-Check Sub-Component ───────────────────────────────────
+
+function FactCheckBlock({ content }: { content: string }) {
+  // Detect reliability level from content
+  const isHigh = content.toLowerCase().includes("high");
+  const isMedium = content.toLowerCase().includes("medium");
+  const hasWarning = content.toLowerCase().includes("contradiction") || content.toLowerCase().includes("warning");
+
+  const borderColor = isHigh
+    ? "border-emerald-500/30"
+    : isMedium
+      ? "border-amber-500/30"
+      : "border-red-500/30";
+
+  const bgColor = isHigh
+    ? "bg-emerald-500/5"
+    : isMedium
+      ? "bg-amber-500/5"
+      : "bg-red-500/5";
+
+  return (
+    <div className={`rounded-xl border p-4 ${borderColor} ${bgColor}`}>
+      {hasWarning && (
+        <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-amber-400">
+          <span>⚠️</span>
+          <span>Contradictions detected</span>
+        </div>
+      )}
+      <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
+        {content}
+      </p>
+    </div>
   );
 }
