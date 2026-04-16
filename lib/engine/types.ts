@@ -50,6 +50,7 @@ export interface AgentContext {
   subtopics: string[];
   web_results: SearchResult[];
   file_context: FileContext[];
+  conversationHistory?: LLMMessage[];
 }
 
 // ── Agent Result ───────────────────────────────────────────────
@@ -213,6 +214,7 @@ export interface ResearchOptions {
   maxSources?: number;
   maxTokens?: number;
   files?: FileContext[];
+  conversationHistory?: LLMMessage[];
 }
 
 export type StreamCallback = (chunk: string, done: boolean) => void;
@@ -227,6 +229,7 @@ export interface ResearchRequest {
   model?: string;
   stream?: boolean;
   files?: FileContext[];
+  conversationHistory?: LLMMessage[];
 }
 
 export interface ResearchApiResponse {

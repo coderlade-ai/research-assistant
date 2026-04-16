@@ -76,6 +76,10 @@ ${Object.keys(allOutputs.codingOutput).length > 0 && allOutputs.codingOutput.cod
 
 WEB SOURCES (${allOutputs.sources.length} found):
 ${allOutputs.sources.slice(0, 6).map((s, i) => `[${i + 1}] ${s.title} (${s.domain}): ${s.snippet}`).join("\n")}
+
+${context.conversationHistory && context.conversationHistory.length > 0
+  ? `PREVIOUS CONVERSATION HISTORY:\n${context.conversationHistory.map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n")}`
+  : ""}
 `.trim();
 
   const messages = [

@@ -19,6 +19,7 @@ import type {
   ResponseSection,
   AgentName,
   AgentStatusEvent,
+  LLMMessage,
 } from "@/lib/engine/types";
 import { ParsedFile } from "@/lib/engine/file-parser";
 
@@ -193,6 +194,7 @@ export default function HomePage() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [streamingText, setStreamingText] = useState("");
   const [fullResult, setFullResult] = useState<ResearchResult | null>(null);
+  const [conversationHistory, setConversationHistory] = useState<LLMMessage[]>([]);
   const abortRef = useRef<AbortController | null>(null);
 
   // ── Routing State ─────────────────────────────────────────────
@@ -225,13 +227,14 @@ export default function HomePage() {
     setAgentStatuses(initialAgentStates());
     setShowAgentPanel(false);
     setRouteComplexity(null);
+    setConversationHistory([]);
     setSidebarView("home");
   }, []);
 
-  // ── History Select Handler ───────────────────────────────────
   const handleSelectHistory = useCallback((historyQuery: string, historyMode: string) => {
     setQuery(historyQuery);
     setMode(historyMode as "pro" | "deep" | "corpus");
+    setConversationHistory([]);
     setSidebarView("home");
   }, []);
 
@@ -322,6 +325,7 @@ export default function HomePage() {
           model: selectedModel,
           stream: true,
           files,
+          conversationHistory,
         }),
         signal: abort.signal,
       });
@@ -330,16 +334,22 @@ export default function HomePage() {
       const contentType = res.headers.get("content-type") ?? "";
       if (contentType.includes("application/json")) {
         const data: ResearchApiResponse = await res.json();
-        if (!data.success || !data.data) throw new Error(data.error ?? "Request failed");
+        const responseData = data.data;
+        if (!data.success || !responseData) throw new Error(data.error ?? "Request failed");
 
-        setFullResult(data.data);
-        setCached(query, mode, selectedModel, data.data);
+        setFullResult(responseData);
+        setCached(query, mode, selectedModel, responseData);
         setIsLoading(false);
         setHasResponse(true);
         setIsStreaming(true);
         setStatusMessage(null);
-        const allSections = toResponseSections(data.data);
-        revealSections(allSections, data.data.sources, setSections, setSources, setIsStreaming);
+        const allSections = toResponseSections(responseData);
+        revealSections(allSections, responseData.sources, setSections, setSources, setIsStreaming);
+        setConversationHistory(prev => [
+          ...prev,
+          { role: "user", content: query.trim() },
+          { role: "assistant", content: `${responseData.overview}\n\n${responseData.details || ""}` }
+        ]);
         setHistory(getHistory());
         return;
       }
@@ -377,6 +387,11 @@ export default function HomePage() {
           const allSections = toResponseSections(result);
           setSections(allSections);
           setSources(result.sources);
+          setConversationHistory(prev => [
+            ...prev,
+            { role: "user", content: query.trim() },
+            { role: "assistant", content: `${result.overview}\n\n${result.details || ""}` }
+          ]);
           setHistory(getHistory());
         },
         onError: (message) => {

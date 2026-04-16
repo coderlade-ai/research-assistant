@@ -80,6 +80,7 @@ function streamingResponse(
             userModelId: body.model,
             maxSources: 8,
             files: body.files,
+            conversationHistory: body.conversationHistory,
           },
           apiKeys,
           (chunk, done) => {
@@ -167,6 +168,7 @@ export async function POST(request: Request): Promise<Response> {
         userModelId: body.model,
         maxSources: 8,
         files: body.files,
+        conversationHistory: body.conversationHistory,
       },
       apiKeys
     );

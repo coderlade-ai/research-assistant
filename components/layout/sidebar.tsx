@@ -129,52 +129,50 @@ export function Sidebar({
         ))}
       </nav>
 
-      {/* History list (when history view active) */}
-      {activeView === "history" && (
-        <div className="mt-4 flex-1 overflow-y-auto">
-          {history.length > 0 ? (
-            <>
-              <div className="mb-2 flex items-center justify-between px-2">
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Recent
-                </p>
+      {/* History list (always visible below nav) */}
+      <div className="mt-4 flex-1 overflow-y-auto">
+        {history.length > 0 ? (
+          <>
+            <div className="mb-2 flex items-center justify-between px-2">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Recent History
+              </p>
+              <button
+                onClick={onClearHistory}
+                className="rounded p-1 text-muted-foreground hover:text-destructive transition-colors"
+                title="Clear History"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+            <div className="space-y-0.5">
+              {history.map((entry) => (
                 <button
-                  onClick={onClearHistory}
-                  className="rounded p-1 text-muted-foreground hover:text-destructive"
+                  key={entry.id}
+                  onClick={() => {
+                    onSelectHistory(entry.query, entry.mode);
+                    if (isMobile) onClose();
+                  }}
+                  className="flex w-full flex-col items-start rounded-lg px-3 py-2 text-left transition-all hover:bg-accent/50 group"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <span className="w-full truncate text-xs text-foreground group-hover:text-primary transition-colors">
+                    {entry.query}
+                  </span>
+                  <span className="mt-0.5 text-[10px] text-muted-foreground">
+                    {formatTimeAgo(entry.timestamp)} · {entry.mode}
+                  </span>
                 </button>
-              </div>
-              <div className="space-y-0.5">
-                {history.slice(0, 20).map((entry) => (
-                  <button
-                    key={entry.id}
-                    onClick={() => {
-                      onSelectHistory(entry.query, entry.mode);
-                      if (isMobile) onClose();
-                    }}
-                    className="flex w-full flex-col items-start rounded-lg px-3 py-2 text-left transition-all hover:bg-accent/50"
-                  >
-                    <span className="w-full truncate text-xs text-foreground">
-                      {entry.query}
-                    </span>
-                    <span className="mt-0.5 text-[10px] text-muted-foreground">
-                      {formatTimeAgo(entry.timestamp)} · {entry.mode}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : (
-            <p className="px-3 py-4 text-xs text-muted-foreground">
-              No history yet. Start researching!
-            </p>
-          )}
-        </div>
-      )}
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className="px-3 py-4 text-xs text-muted-foreground pt-4">
+            No history yet. Start researching!
+          </p>
+        )}
+      </div>
 
-      {/* Spacer when not in history view */}
-      {activeView !== "history" && <div className="flex-1" />}
+      {/* No spacer needed since history list expands to fill */}
 
       {/* Tools */}
       <div className="border-t border-border pt-4">

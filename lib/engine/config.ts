@@ -23,6 +23,26 @@ export const TOKEN_LIMITS = {
   wordsToTokenRatio: 1.3,
 } as const;
 
+// ── Mode Configuration ─────────────────────────────────────────
+
+export const MODE_CONFIG = {
+  corpus: {
+    maxSources: 0,
+    agentTokens: 400,
+    description: "Simple, fast report using pure AI knowledge. No web search.",
+  },
+  deep: {
+    maxSources: 4,
+    agentTokens: 600,
+    description: "Moderate web research combined with AI analysis.",
+  },
+  pro: {
+    maxSources: 8,
+    agentTokens: 1200,
+    description: "Comprehensive deep research using maximum agent capabilities.",
+  },
+} as const;
+
 // ── Model Registry ─────────────────────────────────────────────
 // NVIDIA NIM models (billed per token, high quality)
 // OpenRouter models (many free tiers, used as fallbacks)

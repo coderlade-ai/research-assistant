@@ -4,12 +4,13 @@ import type {
   ApiKeys,
   StreamCallback,
   AgentContext,
+  AgentResult,
   AgentStatusCallback,
   AgentStatusEvent,
   ResearchSource,
   SearchResult,
 } from "./types";
-import { TOKEN_LIMITS } from "./config";
+import { TOKEN_LIMITS, MODE_CONFIG } from "./config";
 import { enhanceQuery } from "./query-enhancer";
 import { selectModelByUserId, getNextFallback } from "./model-router";
 import { buildContext } from "./context-builder";
@@ -179,7 +180,7 @@ export async function runResearch(
       });
       return r;
     }),
-    runWebSearchAgent(
+    MODE_CONFIG[options.mode].maxSources > 0 ? runWebSearchAgent(
       {
         query,
         enhanced_query: query,
@@ -197,7 +198,14 @@ export async function runResearch(
         error: r.error,
       });
       return r;
-    }),
+    }) : Promise.resolve({
+      agent: "web-search-agent",
+      output: { sources: [], summaries: [], raw_results: [] },
+      model_used: "none",
+      provider: "none",
+      durationMs: 0,
+      isFallback: false,
+    } as AgentResult),
   ]);
 
   // Build shared AgentContext from Phase 1 outputs
@@ -214,17 +222,19 @@ export async function runResearch(
     subtopics,
     web_results: webResults,
     file_context: options.files || [],
+    conversationHistory: options.conversationHistory,
   };
 
   // ═══════════════════════════════════════════════════════════
-  // PHASE 2: Analysis + Summary + Coding (parallel, share context)
+  // PHASE 2: Analysis + Summary + Coding + Fact-Check (parallel)
   // ═══════════════════════════════════════════════════════════
 
   emit({ agent: "analysis-agent", status: "running", model: "deepseek-ai/deepseek-v3.2", provider: "nvidia" });
   emit({ agent: "summary-agent", status: "running", model: "minimaxai/minimax-m2.7", provider: "nvidia" });
   emit({ agent: "coding-agent", status: intent === "coding" ? "running" : "skipped", model: "qwen/qwen3-coder-480b-a35b-instruct", provider: "nvidia" });
+  emit({ agent: "fact-check-agent", status: "running", model: "mistralai/mistral-large-3-675b-instruct-2512", provider: "nvidia" });
 
-  const [analysisResult, summaryResult, codingResult] = await Promise.all([
+  const [analysisResult, summaryResult, codingResult, factCheckResult] = await Promise.all([
     runAnalysisAgent(agentContext, apiKeys).then(r => {
       emit({
         agent: "analysis-agent",
@@ -261,30 +271,19 @@ export async function runResearch(
       });
       return r;
     }),
+    runFactCheckAgent(agentContext, apiKeys).then(r => {
+      emit({
+        agent: "fact-check-agent",
+        status: r.error ? "failed" : "done",
+        model: r.model_used,
+        provider: r.provider,
+        durationMs: r.durationMs,
+        isFallback: r.isFallback,
+        error: r.error,
+      });
+      return r;
+    }),
   ]);
-
-  // ═══════════════════════════════════════════════════════════
-  // PHASE 2b: Fact-Check (uses summary output to validate)
-  // ═══════════════════════════════════════════════════════════
-
-  emit({ agent: "fact-check-agent", status: "running", model: "mistralai/mistral-large-3-675b-instruct-2512", provider: "nvidia" });
-
-  const factCheckResult = await runFactCheckAgent(
-    agentContext,
-    summaryResult.output,
-    apiKeys
-  ).then(r => {
-    emit({
-      agent: "fact-check-agent",
-      status: r.error ? "failed" : "done",
-      model: r.model_used,
-      provider: r.provider,
-      durationMs: r.durationMs,
-      isFallback: r.isFallback,
-      error: r.error,
-    });
-    return r;
-  });
 
   // ═══════════════════════════════════════════════════════════
   // PHASE 3: Report Agent — Aggregate Everything
