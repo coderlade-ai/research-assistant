@@ -15,6 +15,8 @@ import { selectModelByUserId, getNextFallback } from "./model-router";
 import { buildContext } from "./context-builder";
 import { classifyError, userFacingMessage } from "./errors";
 import { generateAIResponse } from "./providers";
+import { nvidiaComplete } from "./providers/nvidia";
+import { openrouterComplete } from "./providers/openrouter";
 
 // ── Agent imports ──────────────────────────────────────────────
 import { runWebSearchAgent } from "./agents/web-search-agent";
@@ -34,6 +36,111 @@ function searchResultToSource(r: SearchResult, i: number): ResearchSource {
     snippet: r.snippet,
     url: r.url,
     domain: r.domain,
+  };
+}
+
+// ── Simple Chat (direct response, no agents) ───────────────────
+// Used for greetings, simple questions, quick answers.
+// Primary: NVIDIA Dracarys 70B | Fallback: OpenRouter Llama 3.3 70B Free
+
+const CHAT_SYSTEM = `You are ResAgent, a helpful and friendly AI assistant. 
+For simple questions and conversation, give clear, concise, and direct answers.
+Don't use JSON format — respond naturally in plain text or markdown.
+Keep responses appropriately short for casual questions.`;
+
+export async function runSimpleChat(
+  query: string,
+  apiKeys: ApiKeys,
+  onChunk?: StreamCallback
+): Promise<ResearchResult> {
+  const startTime = Date.now();
+  let modelUsed = "abacusai/dracarys-llama-3.1-70b-instruct";
+  let providerUsed: "nvidia" | "openrouter" = "nvidia";
+  let isFallback = false;
+  let content = "";
+
+  const messages = [
+    { role: "system" as const, content: CHAT_SYSTEM },
+    { role: "user" as const, content: query },
+  ];
+
+  // Try NVIDIA first
+  if (apiKeys.nvidiaKey) {
+    try {
+      if (onChunk) {
+        // Streaming via NVIDIA
+        const { nvidiaStream } = await import("./providers/nvidia");
+        const res = await nvidiaStream(
+          apiKeys.nvidiaKey,
+          { model: modelUsed, messages, maxTokens: 512, temperature: 0.7, stream: true },
+          onChunk
+        );
+        content = res.content;
+      } else {
+        const res = await nvidiaComplete(apiKeys.nvidiaKey, {
+          model: modelUsed,
+          messages,
+          maxTokens: 512,
+          temperature: 0.7,
+        });
+        content = res.content;
+      }
+    } catch {
+      // Fall through to OpenRouter
+      isFallback = true;
+    }
+  }
+
+  // Fallback: OpenRouter Llama 3.3 70B (free)
+  if (!content && apiKeys.openrouterKey) {
+    try {
+      modelUsed = "meta-llama/llama-3.3-70b-instruct:free";
+      providerUsed = "openrouter";
+      isFallback = true;
+      const res = await openrouterComplete(apiKeys.openrouterKey, {
+        model: modelUsed,
+        messages,
+        maxTokens: 512,
+        temperature: 0.7,
+      });
+      content = res.content;
+      if (onChunk) {
+        // Emit entire content as single chunk for simplicity
+        onChunk(content, false);
+        onChunk("", true);
+      }
+    } catch (err) {
+      throw new Error(`Chat response failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  if (!content) {
+    throw new Error("No API key available to generate response");
+  }
+
+  const durationMs = Date.now() - startTime;
+
+  // Wrap plain text response in ResearchResult shape
+  return {
+    overview: content,
+    keyInsights: [],
+    details: "",
+    comparison: "",
+    expertInsights: [],
+    conclusion: "",
+    sources: [],
+    references: [],
+    agentResults: [],
+    metadata: {
+      model: modelUsed,
+      provider: providerUsed,
+      searchProvider: "nvidia",
+      intent: "general",
+      tokensUsed: 0,
+      durationMs,
+      isFallback,
+      agentTrace: [],
+    },
   };
 }
 
@@ -75,7 +182,7 @@ export async function runResearch(
     runWebSearchAgent(
       {
         query,
-        enhanced_query: query, // will be refined after query agent completes
+        enhanced_query: query,
       },
       options.mode,
       apiKeys
@@ -253,7 +360,6 @@ export async function runResearch(
 
   const totalDuration = Date.now() - startTime;
 
-  // Stream a done signal if needed
   if (onChunk) {
     onChunk("", true);
   }
@@ -273,9 +379,9 @@ export async function runResearch(
     metadata: {
       model: reportResult.model_used,
       provider: reportResult.provider,
-      searchProvider: (searchResult.provider as string) || "perplexity",
+      searchProvider: (searchResult.provider as string) || "nvidia",
       intent,
-      tokensUsed: 0, // multi-agent: no single token count
+      tokensUsed: 0,
       durationMs: totalDuration,
       isFallback: reportResult.isFallback,
       agentTrace,

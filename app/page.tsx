@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Sidebar, MobileMenuButton } from "@/components/layout/sidebar";
 import { SearchInput } from "@/components/search/search-input";
 import { SearchControls } from "@/components/search/search-controls";
@@ -34,6 +34,13 @@ const ALL_AGENTS: AgentName[] = [
   "report-agent",
 ];
 
+// ── Route decision event ───────────────────────────────────────
+
+interface RouteDecision {
+  complexity: "simple" | "research";
+  reason: string;
+}
+
 // ── SSE Stream Reader ──────────────────────────────────────────
 
 async function readStream(
@@ -45,6 +52,7 @@ async function readStream(
     onError: (message: string) => void;
     onDone: () => void;
     onAgentStatus: (event: AgentStatusEvent) => void;
+    onRouteDecision: (decision: RouteDecision) => void;
   }
 ) {
   const reader = response.body?.getReader();
@@ -89,6 +97,9 @@ async function readStream(
               case "agent_status":
                 callbacks.onAgentStatus(parsed as AgentStatusEvent);
                 break;
+              case "route_decision":
+                callbacks.onRouteDecision(parsed as RouteDecision);
+                break;
             }
           } catch {
             // skip malformed JSON
@@ -125,7 +136,35 @@ function revealSections(
 // ── Initial agent states ───────────────────────────────────────
 
 function initialAgentStates(): Partial<Record<AgentName, AgentState>> {
-  return Object.fromEntries(ALL_AGENTS.map((n) => [n, { status: "pending" }])) as Partial<Record<AgentName, AgentState>>;
+  return Object.fromEntries(
+    ALL_AGENTS.map((n) => [n, { status: "pending" }])
+  ) as Partial<Record<AgentName, AgentState>>;
+}
+
+// ── Routing badge ──────────────────────────────────────────────
+
+function RoutingBadge({ complexity }: { complexity: "simple" | "research" | null }) {
+  if (!complexity) return null;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -4 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      className="mb-3 flex items-center gap-2"
+    >
+      {complexity === "simple" ? (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          Direct Response
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+          Multi-Agent Research
+        </span>
+      )}
+    </motion.div>
+  );
 }
 
 // ── Component ──────────────────────────────────────────────────
@@ -156,6 +195,9 @@ export default function HomePage() {
   const [fullResult, setFullResult] = useState<ResearchResult | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // ── Routing State ─────────────────────────────────────────────
+  const [routeComplexity, setRouteComplexity] = useState<"simple" | "research" | null>(null);
+
   // ── Agent Status State ────────────────────────────────────────
   const [agentStatuses, setAgentStatuses] = useState<Partial<Record<AgentName, AgentState>>>(
     initialAgentStates()
@@ -182,6 +224,7 @@ export default function HomePage() {
     setFullResult(null);
     setAgentStatuses(initialAgentStates());
     setShowAgentPanel(false);
+    setRouteComplexity(null);
     setSidebarView("home");
   }, []);
 
@@ -229,7 +272,8 @@ export default function HomePage() {
       setSections([]);
       setSources([]);
       setShowAgentPanel(false);
-      // Restore agent trace from cache if available
+      setRouteComplexity(cached.agentResults && cached.agentResults.length > 0 ? "research" : "simple");
+
       if (cached.metadata.agentTrace) {
         const restored = Object.fromEntries(
           cached.metadata.agentTrace.map((t) => [
@@ -261,11 +305,12 @@ export default function HomePage() {
     setSections([]);
     setSources([]);
     setError(null);
-    setStatusMessage("Initializing multi-agent pipeline...");
+    setStatusMessage("Analyzing your query...");
     setStreamingText("");
     setFullResult(null);
     setAgentStatuses(initialAgentStates());
-    setShowAgentPanel(true);
+    setShowAgentPanel(false);
+    setRouteComplexity(null);
 
     try {
       const res = await fetch("/api/research", {
@@ -305,8 +350,19 @@ export default function HomePage() {
       setIsLoading(false);
 
       await readStream(res, {
+        onRouteDecision: ({ complexity }) => {
+          setRouteComplexity(complexity);
+          // Only show agent panel for research queries
+          if (complexity === "research") {
+            setShowAgentPanel(true);
+            setStatusMessage("Launching research agents...");
+          } else {
+            setShowAgentPanel(false);
+            setStatusMessage("Generating response...");
+          }
+        },
         onStatus: (_phase, message) => {
-          setStatusMessage(message);
+          if (message) setStatusMessage(message);
         },
         onToken: (text) => {
           setStreamingText((prev) => prev + text);
@@ -316,6 +372,8 @@ export default function HomePage() {
           setStreamingText("");
           setFullResult(result);
           setCached(query, mode, selectedModel, result);
+
+          // For simple responses, display as a plain paragraph
           const allSections = toResponseSections(result);
           setSections(allSections);
           setSources(result.sources);
@@ -372,9 +430,10 @@ export default function HomePage() {
     [fullResult]
   );
 
-  // ── Render ───────────────────────────────────────────────────
+  // ── Derived flags ─────────────────────────────────────────────
   const showHero = !hasResponse && !isLoading;
-  const showMetadata = fullResult && !isStreaming && !error;
+  const showMetadata = fullResult && !isStreaming && !error && routeComplexity === "research";
+  const isSimpleChat = routeComplexity === "simple";
 
   return (
     <div className="flex h-full">
@@ -399,6 +458,7 @@ export default function HomePage() {
         {/* Content area — scrollable middle */}
         <div className={`flex flex-1 flex-col items-center justify-start overflow-y-auto px-4 ${isMobile ? "pb-40" : "pb-8"}`}>
           <div className="w-full max-w-3xl">
+
             {/* Hero */}
             {showHero && (
               <motion.div
@@ -410,7 +470,7 @@ export default function HomePage() {
                   Research <span className="text-gradient">Smarter</span>
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  7-agent parallel AI system — NVIDIA NIM + OpenRouter · Query · Search · Analysis · Fact-Check · Code · Report
+                  Ask anything — from quick questions to full AI-powered research reports
                 </p>
               </motion.div>
             )}
@@ -435,21 +495,33 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Agent Status Panel */}
-            {showAgentPanel && (isLoading || isStreaming) && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="mt-5"
-              >
-                <AgentStatusPanel agents={agentStatuses} />
-              </motion.div>
-            )}
+            {/* Routing badge */}
+            <AnimatePresence>
+              {(hasResponse || isLoading) && routeComplexity && (
+                <div className="mt-4">
+                  <RoutingBadge complexity={routeComplexity} />
+                </div>
+              )}
+            </AnimatePresence>
+
+            {/* Agent Status Panel — only for research queries */}
+            <AnimatePresence>
+              {showAgentPanel && (isLoading || isStreaming) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="mt-2"
+                >
+                  <AgentStatusPanel agents={agentStatuses} />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Status message */}
             {statusMessage && !showAgentPanel && (
               <motion.div
+                key={statusMessage}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"
@@ -459,14 +531,14 @@ export default function HomePage() {
               </motion.div>
             )}
 
-            {/* Streaming raw text */}
+            {/* Streaming raw text (chat or intermediate) */}
             {streamingText && sections.length === 0 && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="glass-strong mt-6 rounded-2xl p-6"
+                className={`mt-6 rounded-2xl p-6 ${isSimpleChat ? "glass" : "glass-strong"}`}
               >
-                <p className="whitespace-pre-wrap leading-relaxed text-muted-foreground">
+                <p className="whitespace-pre-wrap leading-relaxed text-foreground">
                   {streamingText}
                   <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-primary" />
                 </p>
@@ -484,10 +556,36 @@ export default function HomePage() {
               </motion.div>
             )}
 
-            {/* Structured response */}
-            <ResponseArea sections={sections} isStreaming={isStreaming && sections.length > 0 && !streamingText} />
+            {/* Simple chat: render overview as plain text, no structured sections */}
+            {isSimpleChat && fullResult && !streamingText && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass mt-6 rounded-2xl p-6"
+              >
+                <p className="whitespace-pre-wrap leading-relaxed text-foreground">
+                  {fullResult.overview}
+                </p>
+                <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <span className="rounded bg-accent px-1.5 py-0.5">
+                    {fullResult.metadata.model.split("/").pop()}
+                  </span>
+                  {fullResult.metadata.durationMs > 0 && (
+                    <span>{(fullResult.metadata.durationMs / 1000).toFixed(1)}s</span>
+                  )}
+                </div>
+              </motion.div>
+            )}
 
-            {/* Metadata bar */}
+            {/* Research: structured sections */}
+            {!isSimpleChat && (
+              <ResponseArea
+                sections={sections}
+                isStreaming={isStreaming && sections.length > 0 && !streamingText}
+              />
+            )}
+
+            {/* Research metadata bar */}
             {showMetadata && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -505,7 +603,7 @@ export default function HomePage() {
                 <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">
                   {fullResult.metadata.intent}
                 </span>
-                {fullResult.agentResults && (
+                {fullResult.agentResults && fullResult.agentResults.length > 0 && (
                   <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-emerald-400">
                     {fullResult.agentResults.filter(r => !r.error || r.error === "skipped").length}/{fullResult.agentResults.length} agents OK
                   </span>
@@ -513,11 +611,11 @@ export default function HomePage() {
               </motion.div>
             )}
 
-            {/* Sources */}
-            {sources.length > 0 && <SourcesSection sources={sources} />}
+            {/* Sources — only for research */}
+            {!isSimpleChat && sources.length > 0 && <SourcesSection sources={sources} />}
 
-            {/* Export */}
-            {hasResponse && !isStreaming && sections.length > 0 && !error && (
+            {/* Export — only for research */}
+            {!isSimpleChat && hasResponse && !isStreaming && sections.length > 0 && !error && (
               <ExportButtons onExport={handleExport} />
             )}
           </div>

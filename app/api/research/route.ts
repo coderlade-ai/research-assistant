@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { runResearch } from "@/lib/engine/orchestrator";
+import { runResearch, runSimpleChat } from "@/lib/engine/orchestrator";
+import { classifyQuery } from "@/lib/engine/query-router";
 import { classifyError, userFacingMessage } from "@/lib/engine/errors";
 import type {
   ResearchRequest,
@@ -21,7 +22,11 @@ function hasAnyKey(keys: ApiKeys): boolean {
   return !!(keys.nvidiaKey || keys.openrouterKey);
 }
 
-// ── Streaming Response (SSE) ───────────────────────────────────
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// ── Streaming Response (SSE) — Smart Routing ───────────────────
 
 function streamingResponse(
   query: string,
@@ -39,6 +44,33 @@ function streamingResponse(
       }
 
       try {
+        // ── Step 1: Classify the query ───────────────────────────
+        send("status", { phase: "routing", message: "Analyzing your query..." });
+
+        const { complexity, reason } = await classifyQuery(query, apiKeys);
+
+        // Notify frontend which path was chosen
+        send("route_decision", { complexity, reason });
+
+        // ── Step 2a: SIMPLE → direct chat response ─────────────
+        if (complexity === "simple") {
+          send("status", { phase: "chat", message: "Generating response..." });
+
+          const result = await runSimpleChat(
+            query,
+            apiKeys,
+            (chunk, done) => {
+              if (chunk) send("token", { text: chunk });
+              if (done) send("status", { phase: "done", message: "" });
+            }
+          );
+
+          send("result", result);
+          send("done", {});
+          return;
+        }
+
+        // ── Step 2b: RESEARCH → full multi-agent pipeline ──────
         send("status", { phase: "starting", message: "Initializing multi-agent research pipeline..." });
 
         const result = await runResearch(
@@ -50,16 +82,13 @@ function streamingResponse(
             files: body.files,
           },
           apiKeys,
-          // Streaming chunk callback (for partial token delivery)
           (chunk, done) => {
             if (chunk) send("token", { text: chunk });
             if (done) send("status", { phase: "finalizing", message: "Synthesizing final report..." });
           },
-          // Agent status callback — fires per-agent start/done/fail events
           (event: AgentStatusEvent) => {
             send("agent_status", event);
 
-            // Also update the generic status message
             const label = event.agent.replace("-agent", "").replace(/-/g, " ");
             if (event.status === "running") {
               send("status", {
@@ -100,12 +129,6 @@ function streamingResponse(
   });
 }
 
-// ── Capitalize helper ──────────────────────────────────────────
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 // ── POST Handler ───────────────────────────────────────────────
 
 export async function POST(request: Request): Promise<Response> {
@@ -125,8 +148,7 @@ export async function POST(request: Request): Promise<Response> {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "No API keys configured. Set NVIDIA_API_KEY or OPENROUTER_API_KEY in your environment.",
+          error: "No API keys configured. Set NVIDIA_API_KEY or OPENROUTER_API_KEY in your environment.",
         } satisfies ResearchApiResponse,
         { status: 503 }
       );
@@ -137,7 +159,7 @@ export async function POST(request: Request): Promise<Response> {
       return streamingResponse(body.query.trim(), body, apiKeys);
     }
 
-    // Non-streaming mode
+    // Non-streaming mode — always use research for simplicity
     const result = await runResearch(
       body.query.trim(),
       {
