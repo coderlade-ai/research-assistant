@@ -40,14 +40,20 @@ export async function runFactCheckAgent(
     `[Source ${i + 1}] ${r.title} (${r.domain}): ${r.snippet}`
   ).join("\n\n");
 
+  const filesText = context.file_context.slice(0, 10).map(f =>
+    `[File: ${f.fileName}]\n${f.content.slice(0, 10000)}`
+  ).join("\n\n");
+
   const messages = [
     { role: "system" as const, content: SYSTEM_PROMPT },
     {
       role: "user" as const,
       content: `Research Query: ${context.query}
 
-Available Sources:
+Available Web Sources:
 ${sourcesText || "No web sources available."}
+
+${filesText ? `File Context:\n${filesText}` : ""}
 
 Cross-validate the sources regarding the query. Find agreements, contradictions, and assess reliability. Return ONLY valid JSON.`,
     },

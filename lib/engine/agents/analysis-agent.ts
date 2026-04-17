@@ -39,8 +39,8 @@ export async function runAnalysisAgent(
     `[Source ${i + 1}] ${r.title}\n${r.snippet}`
   ).join("\n\n");
 
-  const filesText = context.file_context.slice(0, 3).map(f =>
-    `[File: ${f.fileName}]\n${f.content.slice(0, 600)}`
+  const filesText = context.file_context.slice(0, 10).map(f =>
+    `[File: ${f.fileName}]\n${f.content.slice(0, 10000)}`
   ).join("\n\n");
 
   const messages = [

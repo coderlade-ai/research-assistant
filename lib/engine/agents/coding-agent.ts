@@ -48,7 +48,7 @@ export async function runCodingAgent(
 Enhanced: ${context.enhanced_query}
 
 ${context.file_context.length > 0
-  ? `Existing Code Context:\n${context.file_context.map(f => `File: ${f.fileName}\n${f.content.slice(0, 800)}`).join("\n\n")}`
+  ? `Existing Code Context:\n${context.file_context.slice(0, 10).map(f => `File: ${f.fileName}\n${f.content.slice(0, 15000)}`).join("\n\n")}`
   : "No existing code context."
 }
 

@@ -79,6 +79,10 @@ ${Object.keys(allOutputs.codingOutput).length > 0 && allOutputs.codingOutput.cod
 WEB SOURCES (${allOutputs.sources.length} found):
 ${allOutputs.sources.slice(0, 6).map((s, i) => `[${i + 1}] ${s.title} (${s.domain}): ${s.snippet}`).join("\n")}
 
+${context.file_context.length > 0
+  ? `FILE CONTEXT (${context.file_context.length} attached):\n${context.file_context.slice(0, 10).map(f => `[File: ${f.fileName}]\n${f.content.slice(0, 15000)}`).join("\n\n")}`
+  : ""}
+
 ${context.conversationHistory && context.conversationHistory.length > 0
   ? `PREVIOUS CONVERSATION HISTORY:\n${context.conversationHistory.map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n\n")}`
   : ""}

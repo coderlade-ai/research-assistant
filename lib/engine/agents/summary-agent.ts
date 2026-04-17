@@ -38,14 +38,20 @@ export async function runSummaryAgent(
     `[${i + 1}] ${r.title}: ${r.snippet}`
   ).join("\n");
 
+  const filesText = context.file_context.slice(0, 10).map(f =>
+    `[File: ${f.fileName}]\n${f.content.slice(0, 10000)}`
+  ).join("\n\n");
+
   const messages = [
     { role: "system" as const, content: SYSTEM_PROMPT },
     {
       role: "user" as const,
       content: `Query: ${context.query}
 
-Sources to Summarize:
+Web Sources to Summarize:
 ${sourcesText || "No web sources available."}
+
+${filesText ? `File Context to Summarize:\n${filesText}` : ""}
 
 Generate a concise summary. Return ONLY valid JSON.`,
     },
