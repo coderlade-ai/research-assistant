@@ -30,46 +30,85 @@ function extractCodeBlock(content: string): { language: string; code: string } {
   return { language: "text", code: content };
 }
 
-// ── Helper to render text with markdown links ────────────────
+// ── Helper to render text with markdown links and bold text ────────────────
 
 function renderContent(text: string) {
-  // Improved Regex to match markdown links [text](url) including bold/emojis
+  // Match links: [text](url)
   const linkRegex = /\[([\s\S]*?)\]\((https?:\/\/[^\s\)]+)\)/g;
-  const parts = [];
-  let lastIndex = 0;
-  let match;
+  // Match bold: **text**
+  const boldRegex = /\*\*([\s\S]*?)\*\*/g;
 
-  while ((match = linkRegex.exec(text)) !== null) {
-    // Push text before the match
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
+  let parts: (string | JSX.Element)[] = [text];
+
+  // Pass 1: Extract Links
+  let newParts: (string | JSX.Element)[] = [];
+  parts.forEach((part) => {
+    if (typeof part !== "string") {
+      newParts.push(part);
+      return;
     }
 
-    const linkText = match[1];
-    const url = match[2];
+    let lastIndex = 0;
+    let match;
+    const regex = new RegExp(linkRegex);
+    while ((match = regex.exec(part)) !== null) {
+      if (match.index > lastIndex) {
+        newParts.push(part.slice(lastIndex, match.index));
+      }
 
-    parts.push(
-      <a
-        key={match.index}
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 px-4 py-2 my-1 font-bold text-sm text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 rounded-xl transition-all shadow-sm hover:shadow-md cursor-pointer no-underline group"
-      >
-        <span>{linkText.replace(/\*\*/g, "").trim()}</span>
-        <span className="text-xs opacity-50 group-hover:translate-x-0.5 transition-transform">→</span>
-      </a>
-    );
+      const linkText = match[1];
+      const url = match[2];
 
-    lastIndex = linkRegex.lastIndex;
-  }
+      newParts.push(
+        <a
+          key={`link-${match.index}`}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-3 py-1.5 my-1 font-bold text-xs text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-lg transition-all cursor-pointer no-underline group"
+        >
+          <span>{linkText.replace(/\*\*/g, "").trim()}</span>
+          <span className="text-[10px] opacity-40 group-hover:translate-x-0.5 transition-transform">
+            ↗
+          </span>
+        </a>
+      );
+      lastIndex = regex.lastIndex;
+    }
+    if (lastIndex < part.length) {
+      newParts.push(part.slice(lastIndex));
+    }
+  });
+  parts = newParts;
 
-  // Push remaining text
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
+  // Pass 2: Extract Bold
+  newParts = [];
+  parts.forEach((part, i) => {
+    if (typeof part !== "string") {
+      newParts.push(part);
+      return;
+    }
 
-  return parts.length > 0 ? parts : text;
+    let lastIndex = 0;
+    let match;
+    const regex = new RegExp(boldRegex);
+    while ((match = regex.exec(part)) !== null) {
+      if (match.index > lastIndex) {
+        newParts.push(part.slice(lastIndex, match.index));
+      }
+      newParts.push(
+        <strong key={`bold-${i}-${match.index}`} className="font-bold text-foreground">
+          {match[1]}
+        </strong>
+      );
+      lastIndex = regex.lastIndex;
+    }
+    if (lastIndex < part.length) {
+      newParts.push(part.slice(lastIndex));
+    }
+  });
+
+  return newParts.length > 0 ? newParts : text;
 }
 
 export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
