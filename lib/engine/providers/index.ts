@@ -1,6 +1,7 @@
 import { nvidiaWithRetry } from "./nvidia";
 import { openrouterWithRetry } from "./openrouter";
 import type { ApiKeys, LLMMessage, LLMResponse, StreamCallback } from "../types";
+import { TOKEN_LIMITS } from "../config";
 
 export interface GenerateAIResponseArgs {
   model: string;
@@ -9,6 +10,9 @@ export interface GenerateAIResponseArgs {
   stream: boolean;
   apiKeys: ApiKeys;
   onChunk?: StreamCallback;
+  maxTokens?: number;
+  temperature?: number;
+  timeoutMs?: number;
 }
 
 export async function generateAIResponse({
@@ -17,14 +21,18 @@ export async function generateAIResponse({
   messages,
   stream,
   apiKeys,
-  onChunk
+  onChunk,
+  maxTokens,
+  temperature,
+  timeoutMs,
 }: GenerateAIResponseArgs): Promise<LLMResponse> {
   const options = {
     model,
     messages,
-    maxTokens: 4096, // default or fetch from registry
-    temperature: 0.3,
+    maxTokens: maxTokens ?? TOKEN_LIMITS.agentMaxTokens,
+    temperature: temperature ?? 0.3,
     stream,
+    timeoutMs,
   };
 
   if (provider === "nvidia") {
@@ -35,7 +43,6 @@ export async function generateAIResponse({
     return openrouterWithRetry(apiKeys.openrouterKey, options, onChunk);
   }
 
-  // Fallback if provider not matched but openrouter is available
   if (!apiKeys.openrouterKey) throw new Error("Missing OpenRouter API key");
   return openrouterWithRetry(apiKeys.openrouterKey, options, onChunk);
 }

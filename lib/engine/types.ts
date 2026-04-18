@@ -160,6 +160,7 @@ export interface LLMRequestOptions {
   temperature: number;
   stream?: boolean;
   jsonMode?: boolean;
+  timeoutMs?: number;
 }
 
 // ── Context ────────────────────────────────────────────────────

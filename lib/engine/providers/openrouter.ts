@@ -50,6 +50,14 @@ function handleErrorStatus(status: number): ResearchError {
   });
 }
 
+// ── Timeout Helper ────────────────────────────────────────────
+
+const DEFAULT_TIMEOUT_MS = 45_000;
+
+function makeSignal(timeoutMs?: number): AbortSignal {
+  return AbortSignal.timeout(timeoutMs ?? DEFAULT_TIMEOUT_MS);
+}
+
 // ── Non-Streaming Completion ───────────────────────────────────
 
 export async function openrouterComplete(
@@ -60,6 +68,7 @@ export async function openrouterComplete(
     method: "POST",
     headers: buildHeaders(apiKey),
     body: JSON.stringify(buildBody({ ...options, stream: false })),
+    signal: makeSignal(options.timeoutMs),
   });
 
   if (!res.ok) throw handleErrorStatus(res.status);
@@ -100,6 +109,7 @@ export async function openrouterStream(
     method: "POST",
     headers: buildHeaders(apiKey),
     body: JSON.stringify(buildBody({ ...options, stream: true })),
+    signal: makeSignal(options.timeoutMs ?? 60_000),
   });
 
   if (!res.ok) throw handleErrorStatus(res.status);

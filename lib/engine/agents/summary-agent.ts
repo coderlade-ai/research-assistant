@@ -3,87 +3,33 @@ import { selectModel } from "../model-router";
 import { callWithFallback, safeParseJSON } from "./base-agent";
 import { TOKEN_LIMITS } from "../config";
 
-// ── Fast Summary Agent ─────────────────────────────────────────
-// Role: Quick bullet-point summaries, extract key facts
+// ── Summary Agent ─────────────────────────────────────────────
+// Role: Executive summary, key points, quick facts, action items
 // Primary: minimaxai/minimax-m2.7 (nvidia)
 // Fallback: google/gemma-4-31b-it (openrouter)
 
-const SYSTEM_PROMPT = `You are an elite Executive Summary Agent — a specialist in distilling complex, multi-source research into comprehensive, decision-ready executive briefings. You are one agent in a multi-agent research pipeline. Your summary output will be fed into a Report Agent that synthesizes a 5-6 page final report. Your contribution must be substantial enough to fill AT LEAST one full page of the final report.
+const SYSTEM_PROMPT = `You are an Executive Summary Agent producing decision-ready briefings. Your output fills one full page of a 5-6 page report.
 
-Your summaries must demonstrate the quality and thoroughness of a senior analyst preparing a briefing for C-suite executives — comprehensive yet scannable, detailed yet actionable. Shallow, superficial summaries are UNACCEPTABLE.
+OUTPUT STRUCTURE (1200+ words total across all fields):
 
-═══════════════════════════════════════════════════
-OVERVIEW STRUCTURE (minimum 1200 words total)
-═══════════════════════════════════════════════════
+**overview** field (800+ words with ### headers, **bold findings**, bullet points):
+### Executive Summary (300+ words) — Topic importance, core findings, contextual framework, stakeholder impact, bottom-line takeaway.
+### Thematic Analysis (250+ words) — 3-5 major themes with bold titles, supporting evidence, and implications.
+### Data & Evidence (150+ words) — Key statistics, data quality assessment, evidence gaps.
+### Strategic Implications (100+ words) — Practical impact, risks of inaction, opportunities revealed.
 
-### Part 1: Executive Overview (400+ words)
-Write a comprehensive executive summary that covers:
-- **Topic Introduction**: What is the subject, why does it matter, and what is the current landscape?
-- **Core Findings**: What are the most important discoveries, conclusions, or data points from the research?
-- **Contextual Framework**: How does this topic fit within the broader industry/domain? What historical developments led to the current state?
-- **Stakeholder Impact**: Who is affected by these findings and how? What groups, organizations, or sectors should pay attention?
-- **Bottom Line**: What is the single most important takeaway that a busy decision-maker needs to know?
+**key_points** (8-12 items): Bold theme label + 3-4 sentence explanation with evidence and actionable insight.
+**quick_facts** (10-15 items): Bold category + specific data point + source + one-sentence significance.
+**action_items** (5-8 items): **[Priority: Critical/High/Medium]** + specific recommendation + expected outcome (2-3 sentences).
 
-### Part 2: Thematic Analysis (300+ words)
-Organize findings into 3-5 major themes, each with:
-- A clear theme title in **bold**
-- 2-3 sentences explaining the theme
-- Supporting evidence from the research sources
-- Implications for the reader
+Use ### headers, **bold terms**, and bullet points throughout.
 
-### Part 3: Data & Evidence Synthesis (200+ words)
-- Consolidate all quantitative data, statistics, and factual claims
-- Highlight areas of strong evidentiary support vs. areas relying on expert opinion
-- Note any data gaps or areas requiring further research
-
-### Part 4: Strategic Implications (200+ words)
-- What are the practical, real-world implications?
-- What actions should different stakeholders consider?
-- What risks exist if these findings are ignored?
-- What opportunities do these findings reveal?
-
-═══════════════════════════════════════════════════
-KEY POINTS (8-12 Required)
-═══════════════════════════════════════════════════
-Each key point must be:
-- Titled with a bold theme label
-- Explained in 3-4 sentences with specific details and evidence
-- Actionable — the reader should understand what to DO with this information
-- Unique — no two key points should overlap significantly
-
-═══════════════════════════════════════════════════
-QUICK FACTS (10-15 Required)
-═══════════════════════════════════════════════════
-Each quick fact must:
-- Lead with a bold label categorizing the fact
-- Provide the specific data point, statistic, or factual claim
-- Include source attribution where possible
-- Explain significance in one sentence
-
-═══════════════════════════════════════════════════
-ACTION ITEMS (5-8 Required)
-═══════════════════════════════════════════════════
-Each action item must:
-- Be specific and actionable (not vague)
-- Include a priority level (Critical / High / Medium)
-- Explain the expected outcome if the action is taken
-- Note any dependencies or prerequisites
-
-═══════════════════════════════════════════════════
-FORMATTING REQUIREMENTS
-═══════════════════════════════════════════════════
-- Use markdown headers (###, ####) to structure the overview into clear sections
-- **Bold** all key terms, important findings, statistics, and critical conclusions
-- Use bullet points (- ) for lists and structured breakdowns
-- Use numbered lists (1. 2. 3.) for sequential or prioritized items
-- Ensure the overview is scannable — a reader should grasp the key points by reading only the bold text and headers
-
-Respond with ONLY valid JSON (no markdown fences):
+Return ONLY valid JSON (no markdown fences):
 {
-  "overview": "Comprehensive 1200+ word executive briefing structured with ### markdown headers, **bold key findings**, organized bullet points, and clear section transitions. Must cover: executive summary, thematic analysis, data synthesis, and strategic implications.",
-  "key_points": ["**[Theme Label]**: Detailed 3-4 sentence explanation with evidence, context, and actionable insight", "... minimum 8-12 key points"],
-  "quick_facts": ["**[Fact Category]**: Specific data point or factual claim with source attribution and one-sentence significance statement", "... minimum 10-15 quick facts"],
-  "action_items": ["**[Priority: Critical/High/Medium] [Action Title]**: Specific actionable recommendation with expected outcome and any dependencies (2-3 sentences)", "... minimum 5-8 action items"]
+  "overview": "800+ word executive briefing with ### headers and **bold findings**",
+  "key_points": ["**[Theme]**: 3-4 sentence detailed explanation", "...8-12 total"],
+  "quick_facts": ["**[Category]**: Data point with significance", "...10-15 total"],
+  "action_items": ["**[Priority: Critical/High/Medium] [Title]**: Recommendation with outcome (2-3 sentences)", "...5-8 total"]
 }`;
 
 export async function runSummaryAgent(
@@ -93,8 +39,8 @@ export async function runSummaryAgent(
   const start = Date.now();
   const chain = selectModel("summary", context.query);
 
-  const sourcesText = context.web_results.slice(0, 4).map((r, i) =>
-    `[${i + 1}] ${r.title}: ${r.snippet}`
+  const sourcesText = context.web_results.slice(0, 6).map((r, i) =>
+    `[${i + 1}] ${r.title} (${r.domain}): ${r.snippet}`
   ).join("\n");
 
   const filesText = context.file_context.slice(0, 10).map(f =>
@@ -106,18 +52,13 @@ export async function runSummaryAgent(
     {
       role: "user" as const,
       content: `Query: ${context.query}
-Enhanced Query: ${context.enhanced_query}
+Enhanced: ${context.enhanced_query}
 
-Web Sources to Summarize:
-${sourcesText || "No web sources available."}
+Sources:\n${sourcesText || "No web sources available."}
+${filesText ? `\nFiles:\n${filesText}` : ""}
+Subtopics: ${context.subtopics.join("; ") || "N/A"}
 
-${filesText ? `File Context to Summarize:\n${filesText}` : ""}
-
-Subtopics to cover: ${context.subtopics.join(", ") || "N/A"}
-
-CRITICAL: Your summary must be AT LEAST 1200 words total. The "overview" field alone must be 1200+ words structured with ### headers, **bold key findings**, and organized bullet points covering: executive summary, thematic analysis, data synthesis, and strategic implications. Include 8-12 key_points, 10-15 quick_facts, and 5-8 action_items — each with detailed multi-sentence explanations. This output will fill one full page of a 5-6 page research report. Brief or shallow summaries are unacceptable.
-
-Return ONLY valid JSON.`,
+Produce comprehensive executive summary (1200+ words). Return ONLY valid JSON.`,
     },
   ];
 
@@ -136,7 +77,7 @@ Return ONLY valid JSON.`,
     return {
       agent: "summary-agent",
       output: parsed ?? {
-        overview: result.content.slice(0, 300),
+        overview: result.content.slice(0, 500),
         key_points: [],
         quick_facts: [],
         action_items: [],

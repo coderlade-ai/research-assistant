@@ -46,6 +46,14 @@ function handleErrorStatus(status: number): ResearchError {
   });
 }
 
+// ── Timeout Helper ────────────────────────────────────────────
+
+const DEFAULT_TIMEOUT_MS = 45_000; // 45 seconds
+
+function makeSignal(timeoutMs?: number): AbortSignal {
+  return AbortSignal.timeout(timeoutMs ?? DEFAULT_TIMEOUT_MS);
+}
+
 // ── Non-Streaming Completion ───────────────────────────────────
 
 export async function nvidiaComplete(
@@ -56,6 +64,7 @@ export async function nvidiaComplete(
     method: "POST",
     headers: buildHeaders(apiKey),
     body: JSON.stringify(buildBody({ ...options, stream: false })),
+    signal: makeSignal(options.timeoutMs),
   });
 
   if (!res.ok) throw handleErrorStatus(res.status);
@@ -86,6 +95,7 @@ export async function nvidiaStream(
     method: "POST",
     headers: buildHeaders(apiKey),
     body: JSON.stringify(buildBody({ ...options, stream: true })),
+    signal: makeSignal(options.timeoutMs ?? 60_000),
   });
 
   if (!res.ok) throw handleErrorStatus(res.status);

@@ -44,17 +44,29 @@ function streamingResponse(
       }
 
       try {
-        // ── Step 1: Classify the query ───────────────────────────
+        // ── Step 1: Fast classification + early start ────────────
         send("status", { phase: "routing", message: "Analyzing your query..." });
 
-        const { complexity: baseComplexity, reason } = await classifyQuery(query, apiKeys);
-        
-        let complexity = baseComplexity;
+        // Force-simple if all agents disabled
         if (body.disabledAgents?.length === 6) {
-          complexity = "simple";
+          send("route_decision", { complexity: "simple", reason: "All agents disabled" });
+          send("status", { phase: "chat", message: "Generating response..." });
+
+          const result = await runSimpleChat(
+            query,
+            apiKeys,
+            (chunk, done) => {
+              if (chunk) send("token", { text: chunk });
+              if (done) send("status", { phase: "done", message: "" });
+            }
+          );
+
+          send("result", result);
+          send("done", {});
+          return;
         }
 
-        // Notify frontend which path was chosen
+        const { complexity, reason } = await classifyQuery(query, apiKeys);
         send("route_decision", { complexity, reason });
 
         // ── Step 2a: SIMPLE → direct chat response ─────────────

@@ -38,6 +38,14 @@ function isRetryable(kind: ErrorKind, statusCode?: number): boolean {
 export function classifyError(error: unknown, provider?: string): ResearchError {
   if (error instanceof ResearchError) return error;
 
+  // AbortSignal.timeout() throws a DOMException with name "TimeoutError"
+  if (error instanceof DOMException && error.name === "TimeoutError") {
+    return new ResearchError("Request timed out", "network", { provider });
+  }
+  if (error instanceof Error && error.name === "AbortError") {
+    return new ResearchError("Request aborted", "network", { provider });
+  }
+
   if (error instanceof TypeError && error.message.includes("fetch")) {
     return new ResearchError("Network error — could not reach API", "network", {
       provider,

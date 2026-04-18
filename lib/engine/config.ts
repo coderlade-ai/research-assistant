@@ -8,9 +8,9 @@ export const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 // ── Retry Configuration ────────────────────────────────────────
 
 export const RETRY_CONFIG = {
-  maxRetries: 2,
-  baseDelayMs: 1000,
-  maxDelayMs: 8000,
+  maxRetries: 1,        // 1 retry max — fallback handles the rest
+  baseDelayMs: 500,     // 500ms initial delay
+  maxDelayMs: 2000,     // 2s max — don't burn time on retries
 } as const;
 
 // ── Token Limits ───────────────────────────────────────────────
@@ -28,17 +28,14 @@ export const TOKEN_LIMITS = {
 export const MODE_CONFIG = {
   corpus: {
     maxSources: 0,
-    agentTokens: 400,
-    description: "Simple, fast report using pure AI knowledge. No web search.",
+    description: "Fast report using pure AI knowledge. No web search.",
   },
   deep: {
     maxSources: 4,
-    agentTokens: 600,
     description: "Moderate web research combined with AI analysis.",
   },
   pro: {
     maxSources: 8,
-    agentTokens: 1200,
     description: "Comprehensive deep research using maximum agent capabilities.",
   },
 } as const;
