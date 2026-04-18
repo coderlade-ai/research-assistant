@@ -121,12 +121,12 @@ export function SearchInput({
             className="flex flex-wrap gap-2 px-1"
           >
             {attachedFiles.map((file, i) => (
-              <div key={i} className="glass flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium border border-border/50">
+              <div key={i} className="flex items-center gap-2 rounded-lg bg-accent/80 border border-border/50 px-3 py-1.5 text-xs font-medium text-foreground/80">
                 {getFileIcon(file.fileType)}
                 <span className="max-w-[150px] truncate">{file.fileName}</span>
                 <button
                   onClick={() => removeFile(i)}
-                  className="ml-1 rounded-full p-0.5 hover:bg-muted-foreground/20 text-muted-foreground hover:text-foreground transition-colors"
+                  className="ml-1 rounded-full p-0.5 hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -153,7 +153,7 @@ export function SearchInput({
           placeholder={dragActive ? "Drop files here..." : "Ask anything or drop files..."}
           rows={1}
           disabled={isLoading}
-          className="w-full resize-none bg-transparent px-10 py-3 pr-14 text-[15px] font-medium text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
+          className="w-full resize-none bg-transparent px-10 py-3 pr-14 text-[15px] font-medium text-foreground/90 placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-60"
         />
         
         {/* Upload Button */}
@@ -186,7 +186,7 @@ export function SearchInput({
             }
           }}
           disabled={!value.trim() || isLoading || isParsing}
-          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-primary to-secondary p-2.5 text-primary-foreground hover:from-secondary hover:to-secondary transition-all hover:glow-sm disabled:opacity-40"
+          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-primary p-2.5 text-primary-foreground transition-all hover:bg-primary/85 hover:glow-sm disabled:opacity-30 disabled:bg-muted"
         >
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin text-primary-foreground" />

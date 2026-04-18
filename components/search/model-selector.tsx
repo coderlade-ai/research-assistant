@@ -39,17 +39,17 @@ export function ModelSelector({ selected, onSelect }: ModelSelectorProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="glass flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:text-foreground">
+      <DropdownMenuTrigger className="flex items-center gap-2 rounded-lg bg-accent/60 border border-border/40 px-3 py-1.5 text-xs font-medium text-muted-foreground/70 transition-all hover:text-foreground hover:border-border/60">
         {selectedModel?.displayName ?? "Auto"}
         <ChevronDown className="h-3 w-3" />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="w-64 border-glass-border bg-card/95 backdrop-blur-xl"
+        className="w-64 border-border bg-card/95 backdrop-blur-2xl"
       >
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="flex items-center gap-2 text-xs text-muted-foreground">
-            🟢 NVIDIA Models
+          <DropdownMenuLabel className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+            NVIDIA Models
           </DropdownMenuLabel>
           {MODEL_REGISTRY.nvidia.map((model) => (
             <DropdownMenuItem
@@ -71,8 +71,8 @@ export function ModelSelector({ selected, onSelect }: ModelSelectorProps) {
         <DropdownMenuSeparator />
 
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="flex items-center gap-2 text-xs text-muted-foreground">
-            🟡 OpenRouter Models
+          <DropdownMenuLabel className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+            OpenRouter Models
           </DropdownMenuLabel>
           {MODEL_REGISTRY.openrouter.map((model) => (
             <DropdownMenuItem

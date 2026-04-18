@@ -37,16 +37,16 @@ export function SearchControls({
   return (
     <div className="flex flex-wrap items-center gap-2 px-1">
       {/* Mode toggles */}
-      <div className="glass flex rounded-lg p-0.5">
+      <div className="flex rounded-lg bg-accent/60 border border-border/40 p-0.5">
         {modes.map((m) => (
           <button
             key={m.value}
             onClick={() => onModeChange(m.value)}
             className={cn(
-              "rounded-md px-3 py-1.5 text-xs font-medium transition-all",
+              "rounded-md px-3 py-1.5 text-xs font-semibold transition-all",
               mode === m.value
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-primary text-primary-foreground shadow-sm glow-sm"
+                : "text-muted-foreground/70 hover:text-foreground"
             )}
           >
             {m.label}
@@ -58,9 +58,9 @@ export function SearchControls({
       <ModelSelector selected={selectedModel} onSelect={onModelChange} />
 
       {/* Settings button */}
-      <button 
+      <button
         onClick={() => setSettingsOpen(true)}
-        className="glass flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:text-foreground"
+        className="flex items-center gap-1.5 rounded-lg bg-accent/60 border border-border/40 px-3 py-1.5 text-xs font-medium text-muted-foreground/70 transition-all hover:text-foreground hover:border-border/60"
       >
         <Settings2 className="h-3 w-3" />
         Settings

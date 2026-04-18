@@ -72,11 +72,11 @@ export function Sidebar({
   ];
 
   const sidebarContent = (
-    <div className="flex h-full flex-col px-3 py-4">
+    <div className="flex h-full flex-col px-3 py-5">
       {/* Logo */}
-      <div className="mb-6 flex items-center justify-between px-2">
+      <div className="mb-7 flex items-center justify-between px-2">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 border border-primary/20">
             <Sparkles className="h-4 w-4 text-primary" />
           </div>
           <span className="text-lg font-semibold tracking-tight">
@@ -85,7 +85,7 @@ export function Sidebar({
         </div>
         <button
           onClick={onClose}
-          className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="rounded-lg p-1.5 text-muted-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
         >
           <X className="h-4 w-4" />
         </button>
@@ -97,7 +97,7 @@ export function Sidebar({
           onNewThread();
           if (isMobile) onClose();
         }}
-        className="glass mb-6 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground transition-all hover:bg-accent"
+        className="mb-6 flex items-center gap-2.5 rounded-xl border border-primary/20 bg-primary/8 px-3 py-2.5 text-sm font-medium text-primary transition-all hover:bg-primary/15 hover:border-primary/30"
       >
         <Plus className="h-4 w-4" />
         New Thread
@@ -112,14 +112,14 @@ export function Sidebar({
             className={cn(
               "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-all",
               item.active
-                ? "bg-accent text-foreground"
+                ? "bg-accent border border-border/50 text-foreground"
                 : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
             )}
           >
             <item.icon className="h-4 w-4" />
             {item.label}
             {item.badge && (
-              <span className="ml-auto rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-medium text-primary">
+              <span className="ml-auto rounded-md bg-primary/12 px-1.5 py-0.5 text-xs font-medium text-primary border border-primary/15">
                 {item.badge}
               </span>
             )}
@@ -128,16 +128,16 @@ export function Sidebar({
       </nav>
 
       {/* History list (always visible below nav) */}
-      <div className="mt-4 flex-1 overflow-y-auto">
+      <div className="mt-5 flex-1 overflow-y-auto">
         {history.length > 0 ? (
           <>
             <div className="mb-2 flex items-center justify-between px-2">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Recent History
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60">
+                Recent
               </p>
               <button
                 onClick={onClearHistory}
-                className="rounded p-1 text-muted-foreground hover:text-destructive transition-colors"
+                className="rounded p-1 text-muted-foreground/40 hover:text-destructive transition-colors"
                 title="Clear History"
               >
                 <Trash2 className="h-3 w-3" />
@@ -153,10 +153,10 @@ export function Sidebar({
                   }}
                   className="flex w-full flex-col items-start rounded-lg px-3 py-2 text-left transition-all hover:bg-accent/50 group"
                 >
-                  <span className="w-full truncate text-xs text-foreground group-hover:text-primary transition-colors">
+                  <span className="w-full truncate text-xs text-foreground/80 group-hover:text-primary transition-colors">
                     {entry.query}
                   </span>
-                  <span className="mt-0.5 text-[10px] text-muted-foreground">
+                  <span className="mt-0.5 text-[10px] text-muted-foreground/50">
                     {formatTimeAgo(entry.timestamp)} · {entry.mode}
                   </span>
                 </button>
@@ -164,24 +164,22 @@ export function Sidebar({
             </div>
           </>
         ) : (
-          <p className="px-3 py-4 text-xs text-muted-foreground pt-4">
+          <p className="px-3 py-4 text-xs text-muted-foreground/50 pt-4">
             No history yet. Start researching!
           </p>
         )}
       </div>
 
-      {/* No spacer needed since history list expands to fill */}
-
       {/* Tools */}
-      <div className="border-t border-border pt-4">
-        <p className="mb-2 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+      <div className="border-t border-border/40 pt-4">
+        <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/60">
           Tools
         </p>
         <div className="space-y-1">
           {toolItems.map((item) => (
             <button
               key={item.label}
-              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-all hover:bg-accent/50 hover:text-foreground"
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-muted-foreground/70 transition-all hover:bg-accent/50 hover:text-foreground"
             >
               <item.icon className="h-4 w-4" />
               {item.label}

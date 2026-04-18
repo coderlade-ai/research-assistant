@@ -21,12 +21,12 @@ export function ExportButtons({ onExport }: ExportButtonsProps) {
       transition={{ delay: 0.3 }}
       className="mt-4 flex items-center gap-2"
     >
-      <span className="mr-1 text-xs text-muted-foreground">Export:</span>
+      <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">Export</span>
       {formats.map((f) => (
         <button
           key={f.value}
           onClick={() => onExport(f.value)}
-          className="glass flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:text-foreground"
+          className="flex items-center gap-1.5 rounded-lg border border-border/40 bg-accent/40 px-3 py-1.5 text-xs font-medium text-muted-foreground/70 transition-all hover:text-foreground hover:border-border/60 hover:bg-accent/70"
         >
           <f.icon className="h-3 w-3" />
           {f.label}

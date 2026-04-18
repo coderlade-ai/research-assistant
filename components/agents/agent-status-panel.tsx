@@ -126,14 +126,14 @@ function AgentRow({
       layout
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
+      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all ${
         status === "running"
-          ? "bg-primary/5 ring-1 ring-primary/30 glow-sm"
+          ? "bg-primary/6 border border-primary/15"
           : status === "done"
-            ? "bg-emerald-500/5"
+            ? "bg-emerald-500/4 border border-emerald-500/10"
             : status === "failed"
-              ? "bg-red-500/5"
-              : "bg-transparent"
+              ? "bg-red-500/5 border border-red-500/10"
+              : "bg-transparent border border-transparent"
       }`}
     >
       {/* Icon + Status */}
@@ -216,16 +216,16 @@ export function AgentStatusPanel({ agents, className = "" }: AgentStatusPanelPro
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`glass rounded-2xl p-4 ${className}`}
+      className={className}
     >
       {/* Header */}
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
           <div className="flex gap-1">
             {[0, 1, 2].map((i) => (
               <motion.div
                 key={i}
-                className="h-1.5 w-1.5 rounded-full bg-primary glow-sm"
+                className="h-1.5 w-1.5 rounded-full bg-primary"
                 animate={{ opacity: [0.3, 1, 0.3] }}
                 transition={{
                   repeat: Infinity,
@@ -235,22 +235,22 @@ export function AgentStatusPanel({ agents, className = "" }: AgentStatusPanelPro
               />
             ))}
           </div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Multi-Agent Pipeline
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground/60">
+            Agent Pipeline
           </span>
         </div>
-        <span className="text-xs text-muted-foreground">
-          {totalActive > 0 ? `${doneCount}/${AGENT_ORDER.length} complete` : "Starting..."}
+        <span className="text-[11px] font-mono text-muted-foreground/50">
+          {totalActive > 0 ? `${doneCount}/${AGENT_ORDER.length}` : "..."}
         </span>
       </div>
 
       {/* Progress bar */}
-      <div className="mb-3 h-1 w-full overflow-hidden rounded-full bg-muted">
+      <div className="mb-4 h-[3px] w-full overflow-hidden rounded-full bg-border/40">
         <motion.div
-          className="h-full rounded-full bg-gradient-to-r from-primary to-primary/60"
+          className="h-full rounded-full bg-gradient-to-r from-primary via-primary/80 to-secondary"
           initial={{ width: "0%" }}
           animate={{ width: `${progressPct}%` }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
         />
       </div>
 

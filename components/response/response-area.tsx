@@ -40,7 +40,7 @@ export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="glass mt-6 rounded-2xl p-6 border border-primary/20/20"
+      className="glass mt-6 rounded-2xl p-6 border-shine"
     >
       <div className="space-y-4">
         {sections.map((section, i) => {
@@ -71,7 +71,7 @@ export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
 
               {/* Paragraph */}
               {section.type === "paragraph" && (
-                <p className="leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                <p className="leading-[1.75] text-muted-foreground/90 whitespace-pre-wrap">
                   {section.content}
                 </p>
               )}
@@ -161,22 +161,22 @@ function CodeBlock({ content }: { content: string }) {
   };
 
   return (
-    <div className="overflow-hidden rounded-xl border border-white/10">
+    <div className="overflow-hidden rounded-xl border border-border/60 bg-[#0A0D15]">
       {/* Header bar */}
-      <div className="flex items-center justify-between bg-white/5 px-4 py-2">
-        <span className="font-mono text-xs text-muted-foreground">
+      <div className="flex items-center justify-between border-b border-border/40 bg-accent/50 px-4 py-2">
+        <span className="font-mono text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wider">
           {language || "code"}
         </span>
         <button
           onClick={handleCopy}
-          className="rounded px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
+          className="rounded-md px-2 py-0.5 text-[11px] font-medium text-muted-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
         >
           Copy
         </button>
       </div>
       {/* Code */}
       <pre className="overflow-x-auto p-4 text-sm leading-relaxed">
-        <code className="text-emerald-300/90 font-mono">{code}</code>
+        <code className="text-emerald-400/80 font-mono">{code}</code>
       </pre>
     </div>
   );
@@ -191,16 +191,16 @@ function FactCheckBlock({ content }: { content: string }) {
   const hasWarning = content.toLowerCase().includes("contradiction") || content.toLowerCase().includes("warning");
 
   const borderColor = isHigh
-    ? "border-emerald-500/30"
+    ? "border-emerald-500/20"
     : isMedium
-      ? "border-amber-500/30"
-      : "border-red-500/30";
+      ? "border-amber-500/20"
+      : "border-red-500/20";
 
   const bgColor = isHigh
-    ? "bg-emerald-500/5"
+    ? "bg-emerald-500/4"
     : isMedium
-      ? "bg-amber-500/5"
-      : "bg-red-500/5";
+      ? "bg-amber-500/4"
+      : "bg-red-500/4";
 
   return (
     <div className={`rounded-xl border p-4 ${borderColor} ${bgColor}`}>

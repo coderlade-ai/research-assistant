@@ -21,11 +21,11 @@ export function SourcesSection({ sources }: SourcesSectionProps) {
     <div className="mt-4">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="glass flex w-full items-center gap-2 rounded-xl px-4 py-3 transition-all hover:bg-accent/60"
+        className="flex w-full items-center gap-2 rounded-xl border border-border/40 bg-accent/40 px-4 py-3 transition-all hover:bg-accent/70 hover:border-border/60"
       >
-        <BookOpen className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium text-foreground">Sources</span>
-        <span className="ml-1 rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-medium text-primary">
+        <BookOpen className="h-4 w-4 text-primary/80" />
+        <span className="text-sm font-medium text-foreground/80">Sources</span>
+        <span className="ml-1 rounded-md bg-primary/10 border border-primary/15 px-1.5 py-0.5 text-[11px] font-bold text-primary">
           {sources.length}
         </span>
         <motion.span

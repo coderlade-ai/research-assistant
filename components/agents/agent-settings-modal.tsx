@@ -78,18 +78,18 @@ export function AgentSettingsModal({
           {CONFIGURABLE_AGENTS.map((agent) => {
             const isEnabled = !disabledAgents.includes(agent.id);
             return (
-              <div 
+              <div
                 key={agent.id}
-                className="flex items-start justify-between space-x-4 rounded-xl border border-glass-border bg-glass-panel p-4"
+                className="flex items-start justify-between space-x-4 rounded-xl border border-border/50 bg-accent/40 p-4"
               >
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-medium leading-none">{agent.name}</h4>
-                    <span className="inline-flex items-center rounded-md bg-accent px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    <h4 className="text-sm font-medium leading-none text-foreground/90">{agent.name}</h4>
+                    <span className="inline-flex items-center rounded-md bg-accent border border-border/40 px-2 py-0.5 text-[10px] font-mono text-muted-foreground/60">
                       {agent.estimatedTime}
                     </span>
                   </div>
-                  <p className="text-[13px] text-muted-foreground">
+                  <p className="text-[13px] text-muted-foreground/70">
                     {agent.description}
                   </p>
                 </div>

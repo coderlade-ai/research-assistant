@@ -154,12 +154,12 @@ function RoutingBadge({ complexity }: { complexity: "simple" | "research" | null
       className="mb-3 flex items-center gap-2"
     >
       {complexity === "simple" ? (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-400">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/8 px-3 py-1.5 text-[11px] font-semibold tracking-wide text-emerald-400 uppercase">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
           Direct Response
         </span>
       ) : (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/8 px-3 py-1.5 text-[11px] font-semibold tracking-wide text-primary uppercase">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
           Multi-Agent Research
         </span>
@@ -491,16 +491,16 @@ export default function HomePage() {
             {/* Hero */}
             {showHero && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
+                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 className="text-center"
               >
-                <h1 className="mb-4 text-4xl font-bold tracking-tight md:text-6xl">
-                  Research <span className="indigo-text-gradient">Assistant</span>
+                <h1 className="mb-5 text-4xl font-bold tracking-[-0.02em] md:text-6xl leading-[1.1]">
+                  Research <span className="text-gradient">Agent</span>
                 </h1>
-                <p className="text-base text-muted-foreground/80 md:text-lg max-w-lg mx-auto">
-                  Ask anything — from quick queries to deep AI-orchestrated reports.
+                <p className="text-base text-muted-foreground/70 md:text-lg max-w-md mx-auto leading-relaxed">
+                  From quick queries to deep, multi-agent research reports.
                 </p>
               </motion.div>
             )}
@@ -523,7 +523,7 @@ export default function HomePage() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
-                  className="mt-2 glass-card rounded-2xl p-4 shimmer-active"
+                  className="mt-3 glass-card rounded-2xl p-5 border-shine"
                 >
                   <AgentStatusPanel agents={agentStatuses} />
                 </motion.div>
@@ -548,11 +548,11 @@ export default function HomePage() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className={`mt-6 rounded-2xl p-6 ${isSimpleChat ? "glass" : "glass-strong"}`}
+                className={`mt-6 rounded-2xl p-6 border-shine ${isSimpleChat ? "glass" : "glass-strong"}`}
               >
-                <p className="whitespace-pre-wrap leading-relaxed text-foreground">
+                <p className="whitespace-pre-wrap leading-[1.75] text-foreground/90">
                   {streamingText}
-                  <span className="ml-0.5 inline-block h-4 w-0.5 animate-pulse bg-primary" />
+                  <span className="ml-0.5 inline-block h-4 w-[2px] animate-pulse bg-primary rounded-full" />
                 </p>
               </motion.div>
             )}
@@ -573,17 +573,17 @@ export default function HomePage() {
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass mt-6 rounded-2xl p-6"
+                className="glass mt-6 rounded-2xl p-6 border-shine"
               >
-                <p className="whitespace-pre-wrap leading-relaxed text-foreground">
+                <p className="whitespace-pre-wrap leading-[1.75] text-foreground/90">
                   {fullResult.overview}
                 </p>
-                <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <span className="rounded bg-accent px-1.5 py-0.5">
+                <div className="mt-4 flex items-center gap-2 text-[11px] text-muted-foreground border-t border-border/50 pt-3">
+                  <span className="rounded-md bg-accent px-2 py-0.5 font-mono">
                     {fullResult.metadata.model.split("/").pop()}
                   </span>
                   {fullResult.metadata.durationMs > 0 && (
-                    <span>{(fullResult.metadata.durationMs / 1000).toFixed(1)}s</span>
+                    <span className="text-muted-foreground/60">{(fullResult.metadata.durationMs / 1000).toFixed(1)}s</span>
                   )}
                 </div>
               </motion.div>
@@ -603,20 +603,20 @@ export default function HomePage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3 }}
-                className="mt-3 flex flex-wrap items-center gap-2 px-1 text-[11px] text-muted-foreground"
+                className="mt-4 flex flex-wrap items-center gap-2 px-1 text-[11px] text-muted-foreground"
               >
-                <span className={`rounded px-1.5 py-0.5 ${fullResult.metadata.isFallback ? "bg-amber-500/20 text-amber-500" : "bg-accent"}`}>
+                <span className={`rounded-md px-2 py-0.5 font-mono ${fullResult.metadata.isFallback ? "bg-amber-500/15 text-amber-400 border border-amber-500/20" : "bg-accent border border-border/50"}`}>
                   {fullResult.metadata.isFallback ? "Fallback: " : "Report: "}
                   {fullResult.metadata.model.split("/").pop()} ({fullResult.metadata.provider.toUpperCase()})
                 </span>
                 {fullResult.metadata.durationMs > 0 && (
-                  <span>{(fullResult.metadata.durationMs / 1000).toFixed(1)}s total</span>
+                  <span className="text-muted-foreground/50">{(fullResult.metadata.durationMs / 1000).toFixed(1)}s total</span>
                 )}
-                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">
+                <span className="rounded-md bg-primary/10 px-2 py-0.5 text-primary border border-primary/15">
                   {fullResult.metadata.intent}
                 </span>
                 {fullResult.agentResults && fullResult.agentResults.length > 0 && (
-                  <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-emerald-400">
+                  <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-emerald-400 border border-emerald-500/15">
                     {fullResult.agentResults.filter(r => !r.error || r.error === "skipped").length}/{fullResult.agentResults.length} agents OK
                   </span>
                 )}
@@ -652,7 +652,7 @@ export default function HomePage() {
             animate={{ y: 0, opacity: 1 }}
             className="w-full max-w-3xl relative z-10 pointer-events-auto"
           >
-            <div className={`rounded-[2rem] p-3 md:p-4 transition-all duration-500 ${showHero ? "glass-card indigo-glow" : "glass shadow-2xl"}`}>
+            <div className={`rounded-[2rem] p-3 md:p-4 transition-all duration-500 border-shine ${showHero ? "glass-card gold-glow" : "glass-strong"}`}>
               <SearchInput
                 value={query}
                 onChange={setQuery}
