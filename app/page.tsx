@@ -479,7 +479,7 @@ export default function HomePage() {
         </div>
 
         {/* Content area — scrollable middle */}
-        <div className={`flex flex-1 flex-col items-center justify-start overflow-y-auto px-4 ${isMobile ? "pb-40" : "pb-8"}`}>
+        <div className="flex flex-1 flex-col items-center justify-start overflow-y-auto px-4 pb-48 md:pb-52">
           <div className="w-full max-w-3xl">
 
             {/* Hero */}
@@ -489,36 +489,16 @@ export default function HomePage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="mb-8 mt-[12vh] text-center md:mt-[18vh]"
               >
-                <h1 className="mb-3 text-3xl font-bold tracking-tight md:text-4xl">
-                  Research <span className="text-gradient">Smarter</span>
+                <h1 className="mb-3 text-3xl font-bold tracking-tight md:text-5xl">
+                  Neural <span className="text-gradient">Lens</span>
                 </h1>
-                <p className="text-sm text-muted-foreground">
-                  Ask anything — from quick questions to full AI-powered research reports
+                <p className="text-base text-muted-foreground/80 md:text-lg">
+                  Ask anything — from quick queries to deep AI-orchestrated reports.
                 </p>
               </motion.div>
             )}
 
             {(hasResponse || isLoading) && <div className="mt-6 md:mt-10" />}
-
-            {/* Desktop search */}
-            {!isMobile && (
-              <div className="space-y-3">
-                <SearchInput
-                  value={query}
-                  onChange={setQuery}
-                  onSubmit={handleSubmit}
-                  isLoading={isLoading}
-                />
-                <SearchControls
-                  mode={mode}
-                  onModeChange={setMode}
-                  selectedModel={selectedModel}
-                  onModelChange={setSelectedModel}
-                  disabledAgents={disabledAgents}
-                  onToggleAgent={handleToggleAgent}
-                />
-              </div>
-            )}
 
             {/* Routing badge */}
             <AnimatePresence>
@@ -646,27 +626,36 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Mobile: sticky bottom search bar */}
-        {isMobile && (
-          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-glass-border bg-background/80 px-4 pb-4 pt-3 backdrop-blur-xl">
-            <SearchInput
-              value={query}
-              onChange={setQuery}
-              onSubmit={handleSubmit}
-              isLoading={isLoading}
-            />
-            <div className="mt-2">
-              <SearchControls
-                mode={mode}
-                onModeChange={setMode}
-                selectedModel={selectedModel}
-                onModelChange={setSelectedModel}
-                disabledAgents={disabledAgents}
-                onToggleAgent={handleToggleAgent}
+        {/* Unified sleek floating bottom search bar */}
+        <div className="fixed inset-x-0 bottom-0 z-30 flex justify-center pb-6 pt-10 pointer-events-none">
+          {/* Fading gradient background for text readability */}
+          <div className="absolute inset-x-0 bottom-0 top-0 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none" />
+          
+          <motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="w-full max-w-3xl px-4 relative z-10 pointer-events-auto"
+          >
+            <div className="glass-strong rounded-[2rem] p-3 md:p-4 shadow-2xl glow-md">
+              <SearchInput
+                value={query}
+                onChange={setQuery}
+                onSubmit={handleSubmit}
+                isLoading={isLoading}
               />
+              <div className="mt-3 flex justify-between items-center ml-1">
+                <SearchControls
+                  mode={mode}
+                  onModeChange={setMode}
+                  selectedModel={selectedModel}
+                  onModelChange={setSelectedModel}
+                  disabledAgents={disabledAgents}
+                  onToggleAgent={handleToggleAgent}
+                />
+              </div>
             </div>
-          </div>
-        )}
+          </motion.div>
+        </div>
       </main>
     </div>
   );

@@ -140,9 +140,7 @@ export function SearchInput({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className={`glass-strong relative rounded-2xl transition-shadow duration-300 ${
-          isLoading ? "glow-pulse" : "focus-within:glow-sm"
-        } ${dragActive ? "border-primary/50 bg-primary/5" : ""}`}
+        className={`relative transition-shadow duration-300 ${dragActive ? "border-primary/50 bg-primary/5 rounded-2xl" : ""}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -155,7 +153,7 @@ export function SearchInput({
           placeholder={dragActive ? "Drop files here..." : "Ask anything or drop files..."}
           rows={1}
           disabled={isLoading}
-          className="w-full resize-none bg-transparent px-12 py-4 pr-14 text-base text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
+          className="w-full resize-none bg-transparent px-10 py-3 pr-14 text-[15px] font-medium text-foreground placeholder:text-muted-foreground focus:outline-none disabled:opacity-60"
         />
         
         {/* Upload Button */}
@@ -188,10 +186,10 @@ export function SearchInput({
             }
           }}
           disabled={!value.trim() || isLoading || isParsing}
-          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl bg-primary p-2.5 text-primary-foreground transition-all hover:glow-sm disabled:opacity-40"
+          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-primary to-[#af5cfe] p-2.5 text-[#33005b] hover:from-[#c180ff] hover:to-[#c180ff] transition-all hover:glow-sm disabled:opacity-40"
         >
           {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin text-[#33005b]" />
           ) : (
             <Send className="h-4 w-4" />
           )}

@@ -128,7 +128,7 @@ function AgentRow({
       animate={{ opacity: 1, y: 0 }}
       className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-colors ${
         status === "running"
-          ? "bg-primary/5 ring-1 ring-primary/20"
+          ? "bg-primary/5 ring-1 ring-primary/30 glow-sm"
           : status === "done"
             ? "bg-emerald-500/5"
             : status === "failed"
@@ -170,7 +170,7 @@ function AgentRow({
               status === "done"
                 ? "bg-emerald-500/10 text-emerald-400"
                 : status === "running"
-                  ? "bg-primary/10 text-primary animate-pulse"
+                  ? "bg-primary/10 text-primary animate-pulse glow-sm"
                   : status === "skipped"
                     ? "bg-muted text-muted-foreground"
                     : "bg-red-500/10 text-red-400"
@@ -216,7 +216,7 @@ export function AgentStatusPanel({ agents, className = "" }: AgentStatusPanelPro
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`glass-strong rounded-2xl p-4 ${className}`}
+      className={`glass rounded-2xl p-4 ${className}`}
     >
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
@@ -225,7 +225,7 @@ export function AgentStatusPanel({ agents, className = "" }: AgentStatusPanelPro
             {[0, 1, 2].map((i) => (
               <motion.div
                 key={i}
-                className="h-1.5 w-1.5 rounded-full bg-primary"
+                className="h-1.5 w-1.5 rounded-full bg-primary glow-sm"
                 animate={{ opacity: [0.3, 1, 0.3] }}
                 transition={{
                   repeat: Infinity,

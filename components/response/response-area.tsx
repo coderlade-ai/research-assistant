@@ -40,7 +40,7 @@ export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="glass-strong mt-6 rounded-2xl p-6"
+      className="glass mt-6 rounded-2xl p-6 border border-primary/20/20"
     >
       <div className="space-y-4">
         {sections.map((section, i) => {
@@ -136,7 +136,7 @@ export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
           {[0, 1, 2].map((i) => (
             <motion.span
               key={i}
-              className="h-1.5 w-1.5 rounded-full bg-primary"
+              className="h-1.5 w-1.5 rounded-full bg-primary glow-sm"
               animate={{ opacity: [0.3, 1, 0.3] }}
               transition={{
                 repeat: Infinity,
