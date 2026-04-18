@@ -9,7 +9,8 @@
       "Bash(rm:*)",
       "Bash(taskkill /PID 9228 /F)",
       "Bash(cmd //c \"taskkill /PID 9228 /F\")",
-      "Bash(curl -s -X POST http://localhost:3000/api/research -H \"Content-Type: application/json\" -d '{\"query\":\"hello\",\"mode\":\"pro\",\"model\":\"balanced-1\",\"stream\":false}')"
+      "Bash(curl -s -X POST http://localhost:3000/api/research -H \"Content-Type: application/json\" -d '{\"query\":\"hello\",\"mode\":\"pro\",\"model\":\"balanced-1\",\"stream\":false}')",
+      "Bash(cmd //c \"taskkill /F /IM node.exe\")"
     ]
   }
 }
