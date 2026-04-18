@@ -179,6 +179,10 @@ export default function HomePage() {
   const [sidebarView, setSidebarView] = useState<"home" | "history">("home");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
+  useEffect(() => {
+    setSidebarOpen(!isMobile);
+  }, [isMobile]);
+
   // ── Search State ─────────────────────────────────────────────
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"pro" | "deep" | "corpus">("pro");
@@ -472,11 +476,13 @@ export default function HomePage() {
         onViewChange={setSidebarView}
       />
 
-      <main className="flex min-h-dvh flex-1 flex-col">
-        {/* Mobile header */}
-        <div className="flex items-center px-4 py-3 md:hidden">
-          <MobileMenuButton onClick={() => setSidebarOpen(true)} />
-        </div>
+      <main className="flex min-h-dvh flex-1 flex-col relative">
+        {/* Header with Menu Button (Desktop & Mobile) */}
+        {!sidebarOpen && (
+          <div className="flex items-center px-4 py-3 absolute top-0 left-0 z-20">
+            <MobileMenuButton onClick={() => setSidebarOpen(true)} />
+          </div>
+        )}
 
         {/* Content area — scrollable middle */}
         <div className="flex flex-1 flex-col items-center justify-start overflow-y-auto px-4 pb-48 md:pb-52">

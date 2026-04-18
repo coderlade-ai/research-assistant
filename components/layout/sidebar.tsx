@@ -83,14 +83,12 @@ export function Sidebar({
             Res<span className="text-gradient">Agent</span>
           </span>
         </div>
-        {isMobile && (
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
+        <button
+          onClick={onClose}
+          className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
       {/* New Thread */}
@@ -222,9 +220,21 @@ export function Sidebar({
   }
 
   return (
-    <aside className="hidden w-72 shrink-0 border-r border-glass-border bg-sidebar md:block">
-      {sidebarContent}
-    </aside>
+    <AnimatePresence initial={false}>
+      {open && (
+        <motion.aside
+          initial={{ width: 0, opacity: 0 }}
+          animate={{ width: 288, opacity: 1 }}
+          exit={{ width: 0, opacity: 0 }}
+          transition={{ type: "spring", damping: 25, stiffness: 200 }}
+          className="hidden shrink-0 border-r border-glass-border bg-sidebar md:block overflow-hidden"
+        >
+          <div className="w-72 h-full">
+            {sidebarContent}
+          </div>
+        </motion.aside>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -232,7 +242,7 @@ export function MobileMenuButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground md:hidden"
+      className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
     >
       <Menu className="h-5 w-5" />
     </button>
