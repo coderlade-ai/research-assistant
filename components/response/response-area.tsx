@@ -30,6 +30,33 @@ function extractCodeBlock(content: string): { language: string; code: string } {
   return { language: "text", code: content };
 }
 
+// ── Helper to render text with markdown links ────────────────
+
+function renderContent(text: string) {
+  // Regex to match [Link Text](URL)
+  const parts = text.split(/(\[[\s\S]*?\]\(https?:\/\/[^\s\)]+\))/g);
+  
+  return parts.map((part, index) => {
+    const match = part.match(/\[([\s\S]*?)\]\((https?:\/\/[^\s\)]+)\)/);
+    if (match) {
+      const linkText = match[1];
+      const url = match[2];
+      return (
+        <a
+          key={index}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 font-medium text-primary hover:text-primary/80 underline underline-offset-4 decoration-primary/30 hover:decoration-primary/60 transition-all cursor-pointer"
+        >
+          {linkText}
+        </a>
+      );
+    }
+    return part;
+  });
+}
+
 export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
   if (sections.length === 0) return null;
 
@@ -72,7 +99,7 @@ export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
               {/* Paragraph */}
               {section.type === "paragraph" && (
                 <p className="leading-[1.75] text-muted-foreground/90 whitespace-pre-wrap">
-                  {section.content}
+                  {renderContent(section.content)}
                 </p>
               )}
 
@@ -104,9 +131,9 @@ export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
                         />
                       )}
                       {isReferences ? (
-                        <span className="break-all">{item}</span>
+                        <span className="break-all">{renderContent(item)}</span>
                       ) : (
-                        item
+                        renderContent(item)
                       )}
                     </motion.li>
                   ))}
