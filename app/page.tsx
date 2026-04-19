@@ -6,7 +6,7 @@ import { Database, FileText, Globe, User, Sparkles } from "lucide-react";
 import { Sidebar, MobileMenuButton } from "@/components/layout/sidebar";
 import { SearchInput } from "@/components/search/search-input";
 import { SearchControls } from "@/components/search/search-controls";
-import { ResponseArea } from "@/components/response/response-area";
+import { ResponseArea, renderContent } from "@/components/response/response-area";
 import { SourcesSection } from "@/components/response/sources-section";
 import { ExportButtons } from "@/components/export/export-buttons";
 import { AgentStatusPanel } from "@/components/agents/agent-status-panel";
@@ -287,7 +287,7 @@ const ChatMessageBubble = memo(function ChatMessageBubble({
               className={`mt-3 rounded-2xl p-6 border-shine ${isSimpleChat ? "glass" : "glass-strong"}`}
             >
               <p className="whitespace-pre-wrap leading-[1.75] text-foreground/90">
-                {message.streamingText}
+                {renderContent(message.streamingText)}
                 <span className="ml-0.5 inline-block h-4 w-[2px] animate-pulse bg-primary rounded-full" />
               </p>
             </motion.div>
@@ -312,7 +312,7 @@ const ChatMessageBubble = memo(function ChatMessageBubble({
               className="glass mt-3 rounded-2xl p-6 border-shine"
             >
               <p className="whitespace-pre-wrap leading-[1.75] text-foreground/90">
-                {message.fullResult.overview}
+                {renderContent(message.fullResult.overview)}
               </p>
               <div className="mt-4 flex items-center gap-2 text-[11px] text-muted-foreground border-t border-border/50 pt-3">
                 <span className="rounded-md bg-accent px-2 py-0.5 font-mono">

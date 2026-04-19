@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { motion } from "framer-motion";
 import type { ResponseSection } from "@/lib/engine/types";
 
@@ -30,77 +31,42 @@ function extractCodeBlock(content: string): { language: string; code: string } {
   return { language: "text", code: content };
 }
 
+import ReactMarkdown, { Components } from "react-markdown";
+
 // ── Helper to render text with markdown links, bold, and italic text ──────────
 
-function renderContent(text: string) {
+const markdownComponents: Components = {
+  p: ({ node: _, ...props }) => <span className="block mb-2 last:mb-0" {...props} />,
+  a: ({ node: _, ...props }) => (
+    <a
+      {...props}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1.5 px-3 py-1 my-0.5 font-bold text-xs text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-md transition-all cursor-pointer no-underline"
+    >
+      {props.children} ↗
+    </a>
+  ),
+  strong: ({ node: _, ...props }) => (
+    <strong {...props} className="font-bold text-foreground" />
+  ),
+  em: ({ node: _, ...props }) => (
+    <em {...props} className="italic text-muted-foreground" />
+  ),
+  ul: ({ node: _, ...props }) => (
+    <ul {...props} className="list-disc pl-5 my-2 space-y-1 block" />
+  ),
+  ol: ({ node: _, ...props }) => (
+    <ol {...props} className="list-decimal pl-5 my-2 space-y-1 block" />
+  ),
+  li: ({ node: _, ...props }) => (
+    <li {...props} className="" />
+  )
+};
+
+export function renderContent(text: string) {
   if (!text) return text;
-
-  // Combined Regex for: 1. Links, 2. Bold, 3. Italic
-  // Note: We use capture groups to identify which one matched
-  const combinedRegex = /(\[[\s\S]*?\]\(https?:\/\/[^\s\)]+\))|(\*\*[\s\S]*?\*\*)|(\*[\s\S]*?\*)/g;
-
-  const parts = [];
-  let lastIndex = 0;
-  let match;
-
-  while ((match = combinedRegex.exec(text)) !== null) {
-    // 1. Add text before the match
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
-    }
-
-    if (match[1]) {
-      // It's a Link: [text](url)
-      const linkMatch = match[1].match(/\[([\s\S]*?)\]\((https?:\/\/[^\s\)]+)\)/);
-      if (linkMatch) {
-        const linkText = linkMatch[1].replace(/\*/g, "").trim();
-        const url = linkMatch[2];
-        parts.push(
-          <a
-            key={`link-${match.index}`}
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1 my-0.5 font-bold text-xs text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-md transition-all cursor-pointer no-underline"
-          >
-            {linkText} ↗
-          </a>
-        );
-      }
-    } else if (match[2]) {
-      // It's Bold: **text**
-      const boldText = match[2].slice(2, -2);
-      parts.push(
-        <strong key={`bold-${match.index}`} className="font-bold text-foreground">
-          {boldText}
-        </strong>
-      );
-    } else if (match[3]) {
-      // It's Italic: *text*
-      const italicText = match[3].slice(1, -1);
-      parts.push(
-        <em key={`italic-${match.index}`} className="italic text-muted-foreground">
-          {italicText}
-        </em>
-      );
-    }
-
-    lastIndex = combinedRegex.lastIndex;
-  }
-
-  // 2. Add remaining text
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-
-  // 3. Final cleanup for stray characters and rendering
-  return parts.map((part, i) => {
-    if (typeof part === "string") {
-      // Remove any stray markdown markers that might have leaked
-      return part.replace(/[\*\_\~]/g, "");
-    }
-    return part;
-  });
+  return <ReactMarkdown components={markdownComponents}>{text}</ReactMarkdown>;
 }
 
 export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
@@ -144,9 +110,9 @@ export function ResponseArea({ sections, isStreaming }: ResponseAreaProps) {
 
               {/* Paragraph */}
               {section.type === "paragraph" && (
-                <p className="leading-[1.75] text-muted-foreground/90 whitespace-pre-wrap">
+                <div className="leading-[1.75] text-muted-foreground/90 whitespace-pre-wrap">
                   {renderContent(section.content)}
-                </p>
+                </div>
               )}
 
               {/* Bullet list */}
